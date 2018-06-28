@@ -2,7 +2,6 @@ package phdev.com.br.faciltransferencia;
 
 import android.os.Environment;
 import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
@@ -10,7 +9,6 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,8 +24,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 
-import br.com.phdev.faciltransferencia.misc.Archive;
-import br.com.phdev.faciltransferencia.misc.SizeInfo;
+import br.com.phdev.faciltransferencia.transfer.Archive;
+import br.com.phdev.faciltransferencia.transfer.SizeInfo;
 import phdev.com.br.faciltransferencia.connection.BroadcastSender;
 import phdev.com.br.faciltransferencia.connection.OnConnectedListener;
 import phdev.com.br.faciltransferencia.connection.OnFailedConnection;

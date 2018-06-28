@@ -2,16 +2,13 @@ package phdev.com.br.faciltransferencia.connection;
 
 import android.util.Log;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.channels.GatheringByteChannel;
 
-import br.com.phdev.faciltransferencia.misc.SizeInfo;
+import br.com.phdev.faciltransferencia.transfer.SizeInfo;
 import phdev.com.br.faciltransferencia.MainActivity;
 
 /*

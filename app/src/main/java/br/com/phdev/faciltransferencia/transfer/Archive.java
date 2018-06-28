@@ -1,4 +1,4 @@
-package br.com.phdev.faciltransferencia.misc;
+package br.com.phdev.faciltransferencia.transfer;
 
 import java.io.Serializable;
 
