@@ -4,6 +4,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -21,8 +22,7 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
 
     public static final String TAG = "MyApp";
 
-    private TCPServer server;
-    private BroadcastSender broadcastSender;
+    private TransferManager transferManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,17 +39,34 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
                 textView.setVisibility(View.INVISIBLE);
                 ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressBar);
                 progressBar.setVisibility(View.VISIBLE);
-
-                TransferManager transferManager = new TransferManager(MainActivity.this);
-
-                //server = new TCPServer(MainActivity.this);
-                //server.start();
-                //broadcastSender = new BroadcastSender();
-                //broadcastSender.start();
-
+                MainActivity.this.transferManager = new TransferManager(MainActivity.this);
             }
         });
 
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (this.transferManager != null)
+            this.transferManager.close();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d(TAG, "onResume");
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Log.d(TAG, "onPause");
+    }
+
+    protected void onStop() {
+        super.onStop();
+        Log.d(TAG, "onStop");
     }
 
     @Override
@@ -87,8 +104,6 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
                 textView.setVisibility(View.VISIBLE);
                 ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressBar);
                 progressBar.setVisibility(View.INVISIBLE);
-                server = null;
-                broadcastSender = null;
             }
         });
     }

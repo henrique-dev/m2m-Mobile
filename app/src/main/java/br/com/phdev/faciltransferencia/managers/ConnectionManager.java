@@ -50,6 +50,12 @@ public class ConnectionManager implements OnReadListener{
         this.TCPServer.start();
     }
 
+    public void close() {
+        this.TCPServer.close();
+        this.broadcastSender.close();
+        this.onObjectReceivedListener = null;
+    }
+
     public WriteListener getWriteListener() {
         return TCPServer;
     }
@@ -63,7 +69,7 @@ public class ConnectionManager implements OnReadListener{
         return this.onObjectReceivedListener.onObjectReceived(getObjectFromBytes(buffer, bufferSize));
     }
 
-    public Object getObjectFromBytes(byte[] buffer, int bufferSize) {
+    private Object getObjectFromBytes(byte[] buffer, int bufferSize) {
         ByteArrayInputStream bais = new ByteArrayInputStream(buffer, 0, bufferSize);
         ObjectInput in = null;
         Object obj = null;

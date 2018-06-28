@@ -35,19 +35,21 @@ public class BroadcastSender extends Thread implements Connection.OnClientConnec
 
     private boolean sendingBroadcast = false;
 
-    public BroadcastSender() {
+    private DatagramSocket datagramSocket;
 
+    public void close() {
+        this.datagramSocket.close();
     }
 
     @Override
     public void run() {
-        DatagramSocket socket = null;
+        this.datagramSocket = null;
         try {
 
             List<InetAddress> addresses = new ArrayList<>();
 
-            socket = new DatagramSocket();
-            socket.setBroadcast(true);
+            this.datagramSocket = new DatagramSocket();
+            this.datagramSocket.setBroadcast(true);
 
             Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
 
@@ -59,14 +61,9 @@ public class BroadcastSender extends Thread implements Connection.OnClientConnec
                 List<InterfaceAddress> interfaces = netInterface.getInterfaceAddresses();
 
                 for (InterfaceAddress address : interfaces) {
-                    //System.out.println("        Endereço de host: " + address.getAddress().getHostAddress());
                     InetAddress broadcastAddress = address.getBroadcast();
-                    if (broadcastAddress != null) {
-                      //  System.out.println("        Endereço de broadcast: " + broadcastAddress.getHostAddress());
+                    if (broadcastAddress != null)
                         addresses.add(broadcastAddress);
-                    } else {
-                        //System.out.println("        Endereço de broadcast: Sem endereço de broadcast");
-                    }
                 }
             }
 
@@ -76,14 +73,14 @@ public class BroadcastSender extends Thread implements Connection.OnClientConnec
 
             for (InetAddress address : addresses) {
                 for (int i=0; i<20; i++) {
-                    socket.send(new DatagramPacket(msg.getBytes(), msg.getBytes().length, address, SERVER_BROADCAST_PORT));
+                    datagramSocket.send(new DatagramPacket(msg.getBytes(), msg.getBytes().length, address, SERVER_BROADCAST_PORT));
                     sleep(500);
                     if (!this.sendingBroadcast)
                         break;
                 }
             }
 
-            socket.close();
+            this.datagramSocket.close();
 
         } catch (SocketException e) {
             e.printStackTrace();
@@ -92,8 +89,8 @@ public class BroadcastSender extends Thread implements Connection.OnClientConnec
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            if (socket != null)
-                socket.close();
+            if (datagramSocket != null)
+                datagramSocket.close();
         }
     }
 

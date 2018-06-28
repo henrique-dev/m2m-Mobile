@@ -15,7 +15,6 @@ import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
 import br.com.phdev.faciltransferencia.connection.interfaces.OnReadListener;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.MainActivity;
-import br.com.phdev.faciltransferencia.exceptions.DisconnectException;
 
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
@@ -41,6 +40,7 @@ public class TCPServer extends Thread implements WriteListener {
     private ServerSocket serverSocket;
     private Socket socket;
 
+    private InputStream in;
     private OutputStream out;
 
     private int bufferSize = BUFFER_MSG_SIZE;
@@ -75,6 +75,22 @@ public class TCPServer extends Thread implements WriteListener {
         return this.connected;
     }
 
+    public void close() {
+        try {
+            if (this.serverSocket!= null && !this.serverSocket.isClosed())this.serverSocket.close();
+            if (this.socket != null && !this.socket.isClosed()) this.socket.close();
+            if (this.out != null) this.out.close();
+            if (this.in != null) this.in.close();
+        } catch (Exception e) {
+            Log.d(MainActivity.TAG, e.getMessage());
+        }
+        finally {
+            this.onReadListener = null;
+            this.guiConnectAlert = null;
+            this.broadcastConnectAlert = null;
+        }
+    }
+
     @Override
     public void run () {
         try {
@@ -82,7 +98,7 @@ public class TCPServer extends Thread implements WriteListener {
             {
                 serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
-                serverSocket.setSoTimeout(10000);
+                serverSocket.setSoTimeout(5000);
                 serverSocket.bind(new InetSocketAddress(TRANSFER_PORT));
                 this.socket = serverSocket.accept();
                 this.serverSocket.close();
@@ -92,7 +108,7 @@ public class TCPServer extends Thread implements WriteListener {
             this.broadcastConnectAlert.onConnect();
             this.connected = true;
             this.out = this.socket.getOutputStream();
-            InputStream in = this.socket.getInputStream();
+            this.in = this.socket.getInputStream();
 
             while (true) {
                 int totalDataReaded = 0;
@@ -102,7 +118,7 @@ public class TCPServer extends Thread implements WriteListener {
                 byte[] buffer = new byte[bufferSize];
                 byte[] finalBuffer = new byte[bufferSize];
 
-                Log.d(MainActivity.TAG, "getReceiveBufferSize: " + socket.getReceiveBufferSize());
+                //Log.d(MainActivity.TAG, "getReceiveBufferSize: " + socket.getReceiveBufferSize());
 
                 while (totalDataReaded < buffer.length) {
                     dataReaded = in.read(buffer);
@@ -122,7 +138,6 @@ public class TCPServer extends Thread implements WriteListener {
                 }
                 if (receivingType == RECEIVING_TYPE_FILE && receivingStatus == RECEIVING_STATUS_READY) {
                     bufferSize = this.onReadListener.onRead(finalBuffer, totalDataReaded);
-                    receivingType = RECEIVING_TYPE_MSG;
                     receivingStatus = RECEIVING_STATUS_WAITING;
                 }
                 if (receivingType == RECEIVING_TYPE_FILE && receivingStatus == RECEIVING_STATUS_WAITING) {
@@ -130,13 +145,16 @@ public class TCPServer extends Thread implements WriteListener {
                 }
             }
         } catch (InterruptedIOException e) {
-            this.guiConnectAlert.onDisconnect("Falha ao conectar. Por favor tente novamente.");
+            if (this.guiConnectAlert != null)
+                this.guiConnectAlert.onDisconnect("Falha ao conectar. Por favor tente novamente.");
             Log.d(MainActivity.TAG, e.getMessage() != null ? e.getMessage() : "");
         } catch (SocketException e) {
-            this.guiConnectAlert.onDisconnect("Conexão encerrada pelo host");
+            if (this.guiConnectAlert != null)
+                this.guiConnectAlert.onDisconnect("Conexão encerrada pelo host");
             Log.d(MainActivity.TAG, e.getMessage());
         } catch (IOException e) {
-            this.guiConnectAlert.onDisconnect(e.getMessage());
+            if (this.guiConnectAlert != null)
+                this.guiConnectAlert.onDisconnect(e.getMessage());
             Log.d(MainActivity.TAG, e.getMessage());
         } finally {
             try {

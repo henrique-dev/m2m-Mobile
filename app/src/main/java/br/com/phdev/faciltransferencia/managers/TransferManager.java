@@ -51,33 +51,11 @@ public class TransferManager implements OnObjectReceivedListener {
         this.writeListener = this.connectionManager.getWriteListener();
     }
 
-    public Object getObjectFromBytes(byte[] buffer, int bufferSize) {
-        ByteArrayInputStream bais = new ByteArrayInputStream(buffer, 0, bufferSize);
-        ObjectInput in = null;
-        Object obj = null;
-
-        try {
-            in = new ObjectInputStream(bais);
-            obj = in.readObject();
-        } catch (ClassNotFoundException e) {
-            Log.e(TAG, "Classe não encontrada. " + e.getMessage());
-            e.printStackTrace();
-        } catch (IOException e) {
-            Log.e(TAG, "Falha na leitura. " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            try {
-                if (in != null) {
-                    in.close();
-                }
-                bais.close();
-            } catch (Exception e) {
-            }
-        }
-        return obj;
+    public void close() {
+        this.connectionManager.close();
     }
 
-    public byte[] getBytesFromObject(Object obj) {
+    private byte[] getBytesFromObject(Object obj) {
         if (obj == null) {
             return null;
         }
@@ -108,24 +86,19 @@ public class TransferManager implements OnObjectReceivedListener {
     private void writeFile(Archive file) {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
-            //File absolutPath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "teste");
-            File absolutPath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
-            if (!absolutPath.mkdir())
+            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
+            if (!absolutePath.mkdir())
                 Log.d(TAG, "Direotrio não criado!");
             else
                 Log.d(TAG, "Diretorio criado");
 
             try {
-                //FileOutputStream fos = openFileOutput(absolutPath, MODE_WORLD_READABLE);
-                FileOutputStream fos = new FileOutputStream(absolutPath + "/" + file.getName());
+                FileOutputStream fos = new FileOutputStream(absolutePath + "/" + file.getName());
                 fos.write(file.getBytes());
                 fos.flush();
                 fos.close();
                 Log.d(TAG, "Arquivo criado com sucesso.");
-                //Toast info = Toast.makeText(this, "Arquivo salvo", Toast.LENGTH_SHORT);
-                //info.show();
-
-                //server.write(getBytesFromObject("cango"));
+                this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
                 this.writeListener.write(getBytesFromObject("cango"));
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "Falha ao salvar o arquivo. " + e.getMessage());
