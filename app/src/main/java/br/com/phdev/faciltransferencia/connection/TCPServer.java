@@ -1,15 +1,21 @@
-package phdev.com.br.faciltransferencia.connection;
+package br.com.phdev.faciltransferencia.connection;
 
 import android.util.Log;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
-import br.com.phdev.faciltransferencia.transfer.SizeInfo;
-import phdev.com.br.faciltransferencia.MainActivity;
+import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
+import br.com.phdev.faciltransferencia.connection.interfaces.OnReadListener;
+import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
+import br.com.phdev.faciltransferencia.MainActivity;
+import br.com.phdev.faciltransferencia.exceptions.DisconnectException;
 
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
@@ -32,47 +38,65 @@ public class TCPServer extends Thread implements WriteListener {
     public static final int TRANSFER_PORT = 10011;
     private final int BUFFER_MSG_SIZE = 512;
 
+    private ServerSocket serverSocket;
     private Socket socket;
 
     private OutputStream out;
 
     private int bufferSize = BUFFER_MSG_SIZE;
 
-    private final int RECEIVING_FILE = 0;
-    private final int RECEIVING_MSG = 1;
-    private int receivingType = RECEIVING_MSG;
+    public static final int RECEIVING_TYPE_FILE = 0;
+    public static final int RECEIVING_TYPE_MSG = 1;
+    private int receivingType = RECEIVING_TYPE_MSG;
 
     private final int RECEIVING_STATUS_WAITING = 0;
     private final int RECEIVING_STATUS_SENDING = 1;
     private final int RECEIVING_STATUS_READY = 2;
     private int receivingStatus = RECEIVING_STATUS_WAITING;
 
-    private OnFailedConnection failedConnection;
     private OnReadListener onReadListener;
-    private OnConnectedListener connectedListener;
+    private Connection.OnClientConnectionTCPStatusListener guiConnectAlert;
+    private Connection.OnClientConnectionTCPStatusListener broadcastConnectAlert;
 
-    public TCPServer(MainActivity mainActivity) {
-        this.onReadListener = mainActivity;
-        this.connectedListener = mainActivity;
-        this.failedConnection = mainActivity;
+    private boolean connected = false;
+
+    public TCPServer(Connection.OnClientConnectionTCPStatusListener guiConnectAlert,
+                     Connection.OnClientConnectionTCPStatusListener broadcastConnectAlert, OnReadListener onReadListener) {
+        this.onReadListener = onReadListener;
+        this.guiConnectAlert = guiConnectAlert;
+        this.broadcastConnectAlert = broadcastConnectAlert;
+    }
+
+    public void setReceivingType(int receivingType) {
+        this.receivingType = receivingType;
+    }
+
+    public boolean isConnected() {
+        return this.connected;
     }
 
     @Override
     public void run () {
         try {
             Log.d(MainActivity.TAG, "Esperando conexão");
-            this.socket = new ServerSocket(TRANSFER_PORT).accept();
+            {
+                serverSocket = new ServerSocket();
+                serverSocket.setReuseAddress(true);
+                serverSocket.setSoTimeout(10000);
+                serverSocket.bind(new InetSocketAddress(TRANSFER_PORT));
+                this.socket = serverSocket.accept();
+                this.serverSocket.close();
+            }
             Log.d(MainActivity.TAG, "Conectado ao servidor");
-            this.connectedListener.onConnected();
-
+            this.guiConnectAlert.onConnect();
+            this.broadcastConnectAlert.onConnect();
+            this.connected = true;
             this.out = this.socket.getOutputStream();
             InputStream in = this.socket.getInputStream();
 
             while (true) {
                 int totalDataReaded = 0;
                 int dataReaded;
-                int bufferReaded;
-                boolean msg = false;
 
                 Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + bufferSize);
                 byte[] buffer = new byte[bufferSize];
@@ -86,48 +110,46 @@ public class TCPServer extends Thread implements WriteListener {
                         finalBuffer[totalDataReaded + i] = buffer[i];
                     }
                     totalDataReaded += dataReaded;
-                    if (receivingType == RECEIVING_MSG) {
+                    if (receivingType == RECEIVING_TYPE_MSG) {
                         try {
-                            if (MainActivity.getObjectFromBytes(finalBuffer, totalDataReaded) != null) {
-                                for (int i=0; i<totalDataReaded; i++) {
-                                    Log.d(MainActivity.TAG, "msg data: " + finalBuffer[i]);
-                                }
-                                SizeInfo sf = (SizeInfo)MainActivity.getObjectFromBytes(finalBuffer, totalDataReaded);
-                                bufferSize = sf.getSize();
-                                Log.e(MainActivity.TAG, "Tamanho do arquivo a ser recebido: " + sf.getSize());
-                                receivingType = RECEIVING_FILE;
-                                break;
-                            }
+                            bufferSize = TCPServer.this.onReadListener.onRead(finalBuffer, totalDataReaded);
+                            Log.e(MainActivity.TAG, "Tamanho do arquivo a ser recebido: " + bufferSize);
+                            break;
                         } catch (Exception e) {
                             Log.d(MainActivity.TAG, e.getMessage());
                         }
                     }
                 }
-                if (receivingType == RECEIVING_FILE && receivingStatus == RECEIVING_STATUS_READY) {
+                if (receivingType == RECEIVING_TYPE_FILE && receivingStatus == RECEIVING_STATUS_READY) {
                     bufferSize = this.onReadListener.onRead(finalBuffer, totalDataReaded);
-                    //Log.d(MainActivity.TAG, "Enviando mensagem de arquivo recebido...");
-                    //write(MainActivity.getBytesFromObject("cango"));
-                    //Log.d(MainActivity.TAG, "Mensagem de arquivo recebido enviada!");
-                    receivingType = RECEIVING_MSG;
+                    receivingType = RECEIVING_TYPE_MSG;
                     receivingStatus = RECEIVING_STATUS_WAITING;
                 }
-                if (receivingType == RECEIVING_FILE && receivingStatus == RECEIVING_STATUS_WAITING) {
+                if (receivingType == RECEIVING_TYPE_FILE && receivingStatus == RECEIVING_STATUS_WAITING) {
                     receivingStatus = RECEIVING_STATUS_READY;
-                    write(MainActivity.getBytesFromObject("sm"));
                 }
             }
+        } catch (InterruptedIOException e) {
+            this.guiConnectAlert.onDisconnect("Falha ao conectar. Por favor tente novamente.");
+            Log.d(MainActivity.TAG, e.getMessage() != null ? e.getMessage() : "");
+        } catch (SocketException e) {
+            this.guiConnectAlert.onDisconnect("Conexão encerrada pelo host");
+            Log.d(MainActivity.TAG, e.getMessage());
         } catch (IOException e) {
+            this.guiConnectAlert.onDisconnect(e.getMessage());
             Log.d(MainActivity.TAG, e.getMessage());
         } finally {
             try {
-                if (this.socket != null)
+                if (this.socket != null) {
                     this.socket.close();
+                }
+                if (this.serverSocket != null && !this.serverSocket.isClosed())
+                    this.serverSocket.close();
             } catch (IOException e) {
                 Log.e(MainActivity.TAG, e.getMessage());
             } finally {
                 this.socket = null;
-                Log.e(MainActivity.TAG, "Erro ao criar socket TCP");
-                this.failedConnection.onFailedConnection();
+                this.connected = false;
             }
         }
     }
@@ -135,7 +157,6 @@ public class TCPServer extends Thread implements WriteListener {
     @Override
     public void write(byte[] bytes) {
         try {
-            //Log.d(MainActivity.TAG, "Tamanho da msg: " + bytes.length);
             this.out.write(bytes);
             this.out.flush();
         } catch (IOException e) {

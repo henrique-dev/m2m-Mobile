@@ -1,4 +1,4 @@
-package phdev.com.br.faciltransferencia.connection;
+package br.com.phdev.faciltransferencia.connection.interfaces;
 
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
@@ -16,8 +16,8 @@ package phdev.com.br.faciltransferencia.connection;
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public interface OnReadListener {
+public interface WriteListener {
 
-    int onRead(final byte[] buffer, int bufferSize);
+    void write(byte[] bytes);
 
 }

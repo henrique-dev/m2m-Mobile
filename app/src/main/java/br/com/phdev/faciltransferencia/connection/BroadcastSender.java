@@ -1,4 +1,4 @@
-package phdev.com.br.faciltransferencia.connection;
+package br.com.phdev.faciltransferencia.connection;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -10,6 +10,8 @@ import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+
+import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
 
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
@@ -27,9 +29,11 @@ import java.util.List;
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public class BroadcastSender extends Thread implements OnConnectedListener {
+public class BroadcastSender extends Thread implements Connection.OnClientConnectionTCPStatusListener {
 
     public static final int SERVER_BROADCAST_PORT = 6012;
+
+    private boolean sendingBroadcast = false;
 
     public BroadcastSender() {
 
@@ -68,16 +72,17 @@ public class BroadcastSender extends Thread implements OnConnectedListener {
 
             String msg = "PauloHenrique\n";
 
+            this.sendingBroadcast = true;
+
             for (InetAddress address : addresses) {
                 for (int i=0; i<20; i++) {
                     socket.send(new DatagramPacket(msg.getBytes(), msg.getBytes().length, address, SERVER_BROADCAST_PORT));
-                    sleep(100);
+                    sleep(500);
+                    if (!this.sendingBroadcast)
+                        break;
                 }
             }
 
-            //NetworkInterface networkInterface = NetworkInterface.getByName("eth0");
-            //InetAddress broadcastAddress = networkInterface.getInterfaceAddresses().get(1).getBroadcast();
-            //System.out.println("Endereço de broadcast: " + broadcastAddress.getHostAddress());
             socket.close();
 
         } catch (SocketException e) {
@@ -93,7 +98,12 @@ public class BroadcastSender extends Thread implements OnConnectedListener {
     }
 
     @Override
-    public void onConnected() {
+    public void onDisconnect(String msg) {
 
+    }
+
+    @Override
+    public void onConnect() {
+        this.sendingBroadcast = false;
     }
 }
