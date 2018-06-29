@@ -37,6 +37,12 @@ public class BroadcastSender extends Thread implements Connection.OnClientConnec
 
     private DatagramSocket datagramSocket;
 
+    private String alias;
+
+    public void setAlias(String alias) {
+        this.alias = alias;
+    }
+
     public void close() {
         this.datagramSocket.close();
     }
@@ -67,13 +73,11 @@ public class BroadcastSender extends Thread implements Connection.OnClientConnec
                 }
             }
 
-            String msg = "PauloHenrique\n";
-
             this.sendingBroadcast = true;
 
             for (InetAddress address : addresses) {
                 for (int i=0; i<20; i++) {
-                    datagramSocket.send(new DatagramPacket(msg.getBytes(), msg.getBytes().length, address, SERVER_BROADCAST_PORT));
+                    datagramSocket.send(new DatagramPacket(alias.getBytes(), alias.getBytes().length, address, SERVER_BROADCAST_PORT));
                     sleep(500);
                     if (!this.sendingBroadcast)
                         break;

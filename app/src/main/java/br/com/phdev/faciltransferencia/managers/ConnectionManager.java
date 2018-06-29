@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ObjectInput;
 import java.io.ObjectInputStream;
+import java.io.Serializable;
 
 import br.com.phdev.faciltransferencia.MainActivity;
 import br.com.phdev.faciltransferencia.connection.BroadcastSender;
@@ -42,7 +43,8 @@ public class ConnectionManager implements OnReadListener{
         this.TCPServer = new TCPServer(context, this.broadcastSender, this);
     }
 
-    public void startBroadcastSender() {
+    public void startBroadcastSender(String userName) {
+        this.broadcastSender.setAlias(userName);
         this.broadcastSender.start();
     }
 

@@ -1,13 +1,30 @@
 package br.com.phdev.faciltransferencia;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
+import android.app.ActivityOptions;
+import android.content.Intent;
+import android.os.Build;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.transition.Explode;
+import android.transition.Fade;
+import android.transition.Scene;
+import android.transition.Transition;
+import android.transition.TransitionInflater;
+import android.transition.TransitionManager;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,25 +41,62 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
 
     private TransferManager transferManager;
 
+    private ViewGroup mainView;
+    private ViewGroup connectedView;
+
+    private ProgressBar progressBar;
+    private Button button;
+    private TextView textView;
+    private EditText editText;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
 
-        FloatingActionButton fabConnect = (FloatingActionButton) findViewById(R.id.fab_connect);
-        fabConnect.setOnClickListener(new View.OnClickListener() {
+        this.mainView = (ViewGroup) findViewById(R.id.mainView);
+        this.connectedView = (ViewGroup) findViewById(R.id.connectedView);
+        this.connectedView.setAlpha(0f);
+
+        this.progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        this.button = (Button) findViewById(R.id.button_connect);
+        this.button.requestFocus();
+        this.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                TextView textView = (TextView) findViewById(R.id.info_view);
-                textView.setVisibility(View.INVISIBLE);
-                ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressBar);
-                progressBar.setVisibility(View.VISIBLE);
-                MainActivity.this.transferManager = new TransferManager(MainActivity.this);
+                MainActivity.this.progressBar.setVisibility(View.VISIBLE);
+                String userName = MainActivity.this.editText.getText().toString();
+                MainActivity.this.transferManager = new TransferManager(MainActivity.this, userName);
             }
         });
+        this.textView = (TextView) findViewById(R.id.textView_alias);
+        this.editText = (EditText) findViewById(R.id.editText_alias);
+        this.editText.clearFocus();
+    }
 
+    private void fadeToConnected() {
+        connectedView.setVisibility(View.VISIBLE);
+        connectedView.animate().alpha(1f).setDuration(400).setListener(null);
+        mainView.animate().alpha(0f).setDuration(400).setListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                mainView.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    private void fadeToMain() {
+        mainView.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(View.GONE);
+        mainView.animate().alpha(1f).setDuration(400).setListener(null);
+        connectedView.animate().alpha(0f).setDuration(400).setListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                connectedView.setVisibility(View.GONE);
+                transferManager.close();
+            }
+        });
     }
 
     @Override
@@ -53,42 +107,11 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        Log.d(TAG, "onResume");
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Log.d(TAG, "onPause");
-    }
-
-    protected void onStop() {
-        super.onStop();
-        Log.d(TAG, "onStop");
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+    public void onBackPressed() {
+        if (this.mainView.getAlpha() == 0)
+            fadeToMain();
+        else
+            super.onBackPressed();
     }
 
     @Override
@@ -96,14 +119,9 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                fadeToMain();
                 Toast info = Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG);
                 info.show();
-                FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab_connect);
-                fab.setVisibility(View.VISIBLE);
-                TextView textView = (TextView) findViewById(R.id.info_view);
-                textView.setVisibility(View.VISIBLE);
-                ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressBar);
-                progressBar.setVisibility(View.INVISIBLE);
             }
         });
     }
@@ -113,13 +131,11 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
+                fadeToConnected();
                 Toast info = Toast.makeText(MainActivity.this, "Conectado", Toast.LENGTH_LONG);
                 info.show();
-                ProgressBar progressBar = (ProgressBar) findViewById(R.id.progressBar);
-                progressBar.setVisibility(View.INVISIBLE);
-                FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab_connect);
-                fab.setVisibility(View.INVISIBLE);
             }
         });
     }
+
 }

@@ -13,6 +13,7 @@ import java.io.ObjectInput;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 
 import br.com.phdev.faciltransferencia.MainActivity;
 import br.com.phdev.faciltransferencia.connection.TCPServer;
@@ -37,16 +38,16 @@ import br.com.phdev.faciltransferencia.transfer.interfaces.OnObjectReceivedListe
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public class TransferManager implements OnObjectReceivedListener {
+public class TransferManager implements OnObjectReceivedListener, Serializable {
 
     private final String TAG = "myApp.TransferManager";
 
     private ConnectionManager connectionManager;
     private WriteListener writeListener;
 
-    public TransferManager(MainActivity context) {
+    public TransferManager(MainActivity context, String userName) {
         this.connectionManager = new ConnectionManager(context,this);
-        this.connectionManager.startBroadcastSender();
+        this.connectionManager.startBroadcastSender(userName);
         this.connectionManager.startTCPServer();
         this.writeListener = this.connectionManager.getWriteListener();
     }
