@@ -4,8 +4,11 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ObjectAnimator;
 import android.animation.ValueAnimator;
+import android.app.ActionBar;
 import android.app.ActivityOptions;
+import android.app.FragmentTransaction;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AppCompatActivity;
@@ -23,6 +26,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -30,6 +34,8 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
@@ -52,7 +58,6 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
 
     private ProgressBar progressBar;
     private Button button;
-    private TextView textView;
     private EditText editText;
 
     private ListView listViewArchives;
@@ -62,13 +67,50 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.teste_activity);
 
         this.mainView = (ViewGroup) findViewById(R.id.mainView);
         this.connectedView = (ViewGroup) findViewById(R.id.connectedView);
         this.connectedView.setAlpha(1f);
 
         this.listViewArchives = (ListView) findViewById(R.id.listView);
+        this.listViewArchives.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                try {
+                    Archive archive = (Archive) adapterView.getItemAtPosition(i);
+                    File file = new File(archive.getPath());
+                    Uri uri = Uri.fromFile(file);
+                    Intent openFileIntent = new Intent(Intent.ACTION_VIEW);
+                    String fts = file.toString();
+                    if (fts.contains(".doc") || fts.contains(".docx"))
+                        openFileIntent.setDataAndType(uri, "application/msword");
+                    else if (fts.contains(".pdf"))
+                        openFileIntent.setDataAndType(uri, "application/pdf");
+                    else if (fts.contains(".xls") || fts.contains(".xlsx"))
+                        openFileIntent.setDataAndType(uri, "application/vnd.ms-excel");
+                    else if (fts.contains(".rtf"))
+                        openFileIntent.setDataAndType(uri, "application/rtf");
+                    else if (fts.contains(".wav") || fts.contains(".mp3"))
+                        openFileIntent.setDataAndType(uri, "audio/x-wav");
+                    else if (fts.contains(".gif"))
+                        openFileIntent.setDataAndType(uri, "image/gif");
+                    else if (fts.contains(".jpg") || fts.contains(".jpeg") || fts.contains(".png"))
+                        openFileIntent.setDataAndType(uri, "image/jpeg");
+                    else if (fts.contains(".txt"))
+                        openFileIntent.setDataAndType(uri, "text/plain");
+                    else if (fts.contains(".3gp") || fts.contains(".mpg") || fts.contains(".mpeg") || fts.contains(".mpe") || fts.contains(".mp4"))
+                        openFileIntent.setDataAndType(uri, "video/*");
+                    else
+                        openFileIntent.setDataAndType(uri, "/*");
+                    openFileIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    MainActivity.this.startActivity(openFileIntent);
+
+                } catch (Exception e) {
+                    Log.d(TAG, e.getMessage());
+                }
+            }
+        });
         this.progressBar = (ProgressBar) findViewById(R.id.progressBar);
         this.button = (Button) findViewById(R.id.button_connect);
         this.button.requestFocus();
@@ -80,9 +122,9 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
                 MainActivity.this.transferManager = new TransferManager(MainActivity.this, userName);
             }
         });
-        this.textView = (TextView) findViewById(R.id.textView_alias);
         this.editText = (EditText) findViewById(R.id.editText_alias);
         this.editText.clearFocus();
+
     }
 
     private void fadeToConnected() {

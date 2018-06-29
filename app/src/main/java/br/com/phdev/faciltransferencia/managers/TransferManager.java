@@ -96,7 +96,7 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
         return bytes;
     }
 
-    private void writeFile(Archive file) {
+    private void writeFile(Archive archive) {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
             File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
@@ -106,13 +106,15 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 Log.d(TAG, "Diretorio criado");
 
             try {
-                FileOutputStream fos = new FileOutputStream(absolutePath + "/" + file.getName());
-                fos.write(file.getBytes());
+                String pathAndName = absolutePath + "/" + archive.getName();
+                FileOutputStream fos = new FileOutputStream(pathAndName);
+                fos.write(archive.getBytes());
                 fos.flush();
                 fos.close();
                 Log.d(TAG, "Arquivo criado com sucesso.");
-                file.setBytes(null);
-                this.archives.add(file);
+                archive.setBytes(null);
+                archive.setPath(pathAndName);
+                this.archives.add(archive);
                 this.transferStatusListener.onSendComplete();
                 this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
                 this.writeListener.write(getBytesFromObject("cango"));
