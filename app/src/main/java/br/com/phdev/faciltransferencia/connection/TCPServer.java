@@ -118,8 +118,6 @@ public class TCPServer extends Thread implements WriteListener {
                 byte[] buffer = new byte[bufferSize];
                 byte[] finalBuffer = new byte[bufferSize];
 
-                //Log.d(MainActivity.TAG, "getReceiveBufferSize: " + socket.getReceiveBufferSize());
-
                 while (totalDataReaded < buffer.length) {
                     dataReaded = in.read(buffer);
                     for (int i=0; i<dataReaded; i++) {
@@ -139,9 +137,11 @@ public class TCPServer extends Thread implements WriteListener {
                 if (receivingType == RECEIVING_TYPE_FILE && receivingStatus == RECEIVING_STATUS_READY) {
                     bufferSize = this.onReadListener.onRead(finalBuffer, totalDataReaded);
                     receivingStatus = RECEIVING_STATUS_WAITING;
+                    this.socket.setSoTimeout(0);
                 }
                 if (receivingType == RECEIVING_TYPE_FILE && receivingStatus == RECEIVING_STATUS_WAITING) {
                     receivingStatus = RECEIVING_STATUS_READY;
+                    this.socket.setSoTimeout(20000);
                 }
             }
         } catch (InterruptedIOException e) {

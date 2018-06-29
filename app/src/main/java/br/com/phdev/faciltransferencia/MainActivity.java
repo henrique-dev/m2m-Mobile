@@ -2,40 +2,25 @@ package br.com.phdev.faciltransferencia;
 
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.ObjectAnimator;
-import android.animation.ValueAnimator;
-import android.app.ActionBar;
-import android.app.ActivityOptions;
-import android.app.FragmentTransaction;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
-import android.support.design.widget.FloatingActionButton;
-import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v7.widget.Toolbar;
-import android.transition.Explode;
-import android.transition.Fade;
-import android.transition.Scene;
-import android.transition.Transition;
-import android.transition.TransitionInflater;
-import android.transition.TransitionManager;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
@@ -44,8 +29,6 @@ import br.com.phdev.faciltransferencia.managers.TransferManager;
 import br.com.phdev.faciltransferencia.transfer.Archive;
 import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListener;
 import phdev.com.br.faciltransferencia.R;
-import br.com.phdev.faciltransferencia.connection.BroadcastSender;
-import br.com.phdev.faciltransferencia.connection.TCPServer;
 
 public class MainActivity extends AppCompatActivity implements Connection.OnClientConnectionTCPStatusListener, TransferStatusListener {
 
@@ -67,7 +50,8 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.teste_activity);
+
+        setContentView(R.layout.activity_main);
 
         this.mainView = (ViewGroup) findViewById(R.id.mainView);
         this.connectedView = (ViewGroup) findViewById(R.id.connectedView);
@@ -117,13 +101,14 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         this.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                MainActivity.this.button.setEnabled(false);
                 MainActivity.this.progressBar.setVisibility(View.VISIBLE);
                 String userName = MainActivity.this.editText.getText().toString();
                 MainActivity.this.transferManager = new TransferManager(MainActivity.this, userName);
             }
         });
         this.editText = (EditText) findViewById(R.id.editText_alias);
-        this.editText.clearFocus();
+        this.editText.setText(Build.MODEL);
 
     }
 
@@ -134,6 +119,7 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
             @Override
             public void onAnimationEnd(Animator animation) {
                 mainView.setVisibility(View.GONE);
+                Snackbar.make(MainActivity.this.mainView, "Conectado", Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
         });
     }
@@ -172,8 +158,8 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
             @Override
             public void run() {
                 MainActivity.this.fadeToMain();
-                Toast info = Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG);
-                info.show();
+                MainActivity.this.button.setEnabled(true);
+                Snackbar.make(MainActivity.this.mainView, msg, Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
         });
     }
@@ -184,8 +170,6 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
             @Override
             public void run() {
                 MainActivity.this.fadeToConnected();
-                Toast info = Toast.makeText(MainActivity.this, "Conectado", Toast.LENGTH_LONG);
-                info.show();
                 MainActivity.this.archivesList = MainActivity.this.transferManager.getArchivesList();
             }
         });
