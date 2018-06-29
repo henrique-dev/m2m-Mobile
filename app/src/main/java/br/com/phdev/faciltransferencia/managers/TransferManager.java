@@ -14,6 +14,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 import br.com.phdev.faciltransferencia.MainActivity;
 import br.com.phdev.faciltransferencia.connection.TCPServer;
@@ -21,6 +23,7 @@ import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.transfer.Archive;
 import br.com.phdev.faciltransferencia.transfer.SizeInfo;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnObjectReceivedListener;
+import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListener;
 
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
@@ -42,14 +45,23 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
 
     private final String TAG = "myApp.TransferManager";
 
+    private TransferStatusListener transferStatusListener;
     private ConnectionManager connectionManager;
     private WriteListener writeListener;
+
+    private List<Archive> archives;
 
     public TransferManager(MainActivity context, String userName) {
         this.connectionManager = new ConnectionManager(context,this);
         this.connectionManager.startBroadcastSender(userName);
         this.connectionManager.startTCPServer();
         this.writeListener = this.connectionManager.getWriteListener();
+        this.transferStatusListener = context;
+        this.archives = new ArrayList<>();
+    }
+
+    public List<Archive> getArchivesList() {
+        return this.archives;
     }
 
     public void close() {
@@ -99,6 +111,9 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 fos.flush();
                 fos.close();
                 Log.d(TAG, "Arquivo criado com sucesso.");
+                file.setBytes(null);
+                this.archives.add(file);
+                this.transferStatusListener.onSendComplete();
                 this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
                 this.writeListener.write(getBytesFromObject("cango"));
             } catch (FileNotFoundException e) {

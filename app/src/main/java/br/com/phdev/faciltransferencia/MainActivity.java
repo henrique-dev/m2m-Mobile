@@ -25,17 +25,23 @@ import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.List;
+
 import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
+import br.com.phdev.faciltransferencia.customviews.ArchiveAdapter;
 import br.com.phdev.faciltransferencia.managers.TransferManager;
+import br.com.phdev.faciltransferencia.transfer.Archive;
+import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListener;
 import phdev.com.br.faciltransferencia.R;
 import br.com.phdev.faciltransferencia.connection.BroadcastSender;
 import br.com.phdev.faciltransferencia.connection.TCPServer;
 
-public class MainActivity extends AppCompatActivity implements Connection.OnClientConnectionTCPStatusListener {
+public class MainActivity extends AppCompatActivity implements Connection.OnClientConnectionTCPStatusListener, TransferStatusListener {
 
     public static final String TAG = "MyApp";
 
@@ -49,6 +55,9 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     private TextView textView;
     private EditText editText;
 
+    private ListView listViewArchives;
+
+    private List<Archive> archivesList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,8 +66,9 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
 
         this.mainView = (ViewGroup) findViewById(R.id.mainView);
         this.connectedView = (ViewGroup) findViewById(R.id.connectedView);
-        this.connectedView.setAlpha(0f);
+        this.connectedView.setAlpha(1f);
 
+        this.listViewArchives = (ListView) findViewById(R.id.listView);
         this.progressBar = (ProgressBar) findViewById(R.id.progressBar);
         this.button = (Button) findViewById(R.id.button_connect);
         this.button.requestFocus();
@@ -119,7 +129,7 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                fadeToMain();
+                MainActivity.this.fadeToMain();
                 Toast info = Toast.makeText(MainActivity.this, msg, Toast.LENGTH_LONG);
                 info.show();
             }
@@ -131,11 +141,26 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                fadeToConnected();
+                MainActivity.this.fadeToConnected();
                 Toast info = Toast.makeText(MainActivity.this, "Conectado", Toast.LENGTH_LONG);
                 info.show();
+                MainActivity.this.archivesList = MainActivity.this.transferManager.getArchivesList();
             }
         });
     }
 
+    @Override
+    public void onSending() {
+    }
+
+    @Override
+    public void onSendComplete() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                ArchiveAdapter archiveAdapter = new ArchiveAdapter(MainActivity.this, MainActivity.this.archivesList);
+                MainActivity.this.listViewArchives.setAdapter(archiveAdapter);
+            }
+        });
+    }
 }
