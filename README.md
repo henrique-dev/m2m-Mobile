@@ -6,6 +6,16 @@ Este projeto se encontra em atualização
 
 Para baixar o último lançamento da aplicação, [clique aqui](https://play.google.com/store/apps/details?id=phdev.com.br.faciltransferencia).
 
+### Funções atuais
+- [X] Recebimento de arquivos do computador.
+- [X] Pareamento automático entre smartphone e computador.
+- [X] Tamanho máximo do arquivo para recebimento: 30Mb.
+
+### Proximas funções
+- [ ] Transferência do smartphone para o computador.
+- [ ] Pareamente manual entre smartphone e computador.
+- [ ] Aumento do tamanho máximo de envio e recebimento de arquivos para 200Mb.
+
 ### Descrição
 
 Esta aplicação funciona em par com [m2m-Desktop](https://github.com/henrique-dev/m2m-Desktop). Essa versão é a mobile e
