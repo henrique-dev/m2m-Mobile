@@ -1,4 +1,6 @@
-package br.com.phdev.faciltransferencia.transfer.interfaces;
+package br.com.phdev.faciltransferencia.transfer;
+
+import java.io.Serializable;
 
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
@@ -16,10 +18,16 @@ package br.com.phdev.faciltransferencia.transfer.interfaces;
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public interface TransferStatusListener {
+public class SystemInfo implements Serializable{
 
-    void onSending();
-    void onSendComplete();
-    void noSpace();
+    private long spaceAvailable;
+
+    public long getSpaceAvailable() {
+        return spaceAvailable;
+    }
+
+    public void setSpaceAvailable(long spaceAvailable) {
+        this.spaceAvailable = spaceAvailable;
+    }
 
 }

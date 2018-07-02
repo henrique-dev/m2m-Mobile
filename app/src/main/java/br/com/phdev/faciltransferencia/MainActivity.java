@@ -11,14 +11,11 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.Window;
-import android.view.WindowManager;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.ProgressBar;
-import android.widget.Toast;
 
 import java.io.File;
 import java.util.List;
@@ -39,9 +36,11 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     private ViewGroup mainView;
     private ViewGroup connectedView;
 
-    private ProgressBar progressBar;
+    private ProgressBar progressBar_connecting;
     private Button button;
     private EditText editText;
+
+    private ProgressBar progressBar_receiving;
 
     private ListView listViewArchives;
 
@@ -95,20 +94,22 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
                 }
             }
         });
-        this.progressBar = (ProgressBar) findViewById(R.id.progressBar);
+        this.progressBar_connecting = (ProgressBar) findViewById(R.id.progressBar_connecting);
         this.button = (Button) findViewById(R.id.button_connect);
         this.button.requestFocus();
         this.button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 MainActivity.this.button.setEnabled(false);
-                MainActivity.this.progressBar.setVisibility(View.VISIBLE);
+                MainActivity.this.progressBar_connecting.setVisibility(View.VISIBLE);
                 String userName = MainActivity.this.editText.getText().toString();
                 MainActivity.this.transferManager = new TransferManager(MainActivity.this, userName);
             }
         });
         this.editText = (EditText) findViewById(R.id.editText_alias);
         this.editText.setText(Build.MODEL);
+
+        this.progressBar_receiving = (ProgressBar) findViewById(R.id.progressBar_receiving);
 
     }
 
@@ -126,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
 
     private void fadeToMain() {
         mainView.setVisibility(View.VISIBLE);
-        progressBar.setVisibility(View.GONE);
+        progressBar_connecting.setVisibility(View.GONE);
         mainView.animate().alpha(1f).setDuration(400).setListener(null);
         connectedView.animate().alpha(0f).setDuration(400).setListener(new AnimatorListenerAdapter() {
             @Override
@@ -177,6 +178,12 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
 
     @Override
     public void onSending() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.progressBar_receiving.setVisibility(View.VISIBLE);
+            }
+        });
     }
 
     @Override
@@ -186,6 +193,17 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
             public void run() {
                 ArchiveAdapter archiveAdapter = new ArchiveAdapter(MainActivity.this, MainActivity.this.archivesList);
                 MainActivity.this.listViewArchives.setAdapter(archiveAdapter);
+                MainActivity.this.progressBar_receiving.setVisibility(View.INVISIBLE);
+            }
+        });
+    }
+
+    @Override
+    public void noSpace() {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Snackbar.make(MainActivity.this.mainView, "Espaço insuficiente", Snackbar.LENGTH_LONG).setAction("Action", null).show();
             }
         });
     }

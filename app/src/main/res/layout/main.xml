@@ -38,7 +38,7 @@
         app:layout_constraintVertical_bias="0.412" />
 
     <ProgressBar
-        android:id="@+id/progressBar"
+        android:id="@+id/progressBar_connecting"
         style="@style/Widget.AppCompat.ProgressBar"
         android:layout_width="222dp"
         android:layout_height="20dp"

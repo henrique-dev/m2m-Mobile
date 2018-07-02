@@ -49,6 +49,7 @@ import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListene
 public class TransferManager implements OnObjectReceivedListener, Serializable {
 
     private final String TAG = "myApp.TransferManager";
+    private final long PERCENT_SPACE_ONDISK_UNAVAILABLE = 5;
 
     private MainActivity mainActivity;
     private ConnectionManager connectionManager;
@@ -167,7 +168,6 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 String pathAndName = absolutePath + "/" + this.currentReceiveArchive.getName();
                 FileOutputStream fos = new FileOutputStream(pathAndName);
                 FileChannel outFile = fos.getChannel();
-                Log.d(MainActivity.TAG, "Tamanho do outFile.size: " + outFile.size());
                 for (File fragmentFile : this.currentReceiveArchiveInFragments) {
                     FileInputStream fis = new FileInputStream(fragmentFile.getPath());
                     FileChannel inFile = fis.getChannel();
@@ -179,6 +179,8 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 outFile.close();
                 fos.flush();
                 fos.close();
+                currentReceiveArchive.setPath(pathAndName);
+                this.archives.add(currentReceiveArchive);
                 Log.d(TAG, "Arquivo criado com sucesso.");
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "Erro ao salvar arquivo!" + e.getMessage());
@@ -189,14 +191,31 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
             Log.e(TAG, "Não é possivel armazenar!!!");
     }
 
+    private boolean haveSpace(long fileSize) {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
+            long freeSpaceAvailable = absolutePath.getFreeSpace();
+            long spaceAvailableForUs = freeSpaceAvailable - (long)(freeSpaceAvailable * (double)(PERCENT_SPACE_ONDISK_UNAVAILABLE / 100));
+            return fileSize <= spaceAvailableForUs;
+        }
+        return false;
+    }
+
     @Override
     public void onObjectReceived(Object obj) {
         if (obj instanceof ArchiveInfo) {
             ArchiveInfo archiveInfo = (ArchiveInfo) obj;
+            if (!haveSpace(archiveInfo.getArchiveLength())) {
+                this.writeListener.write(getBytesFromObject("nospace"));
+                this.mainActivity.noSpace();
+                return;
+            }
             this.currentReceiveArchive = new Archive();
             this.currentReceiveArchive.setName(archiveInfo.getArchiveName());
             this.connectionManager.setArchiveInfo(archiveInfo);
             this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_FILE);
+            this.mainActivity.onSending();
             if (archiveInfo.getFragmentsAmount() > 1) {
                 currentReceiveArchiveInFragments = new ArrayList<>();
             }
@@ -205,6 +224,7 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
             FragmentArchive fragmentArchive = (FragmentArchive) obj;
             if (fragmentArchive.isLast()) {
                 this.mergeFragments();
+                this.mainActivity.onSendComplete();
                 this.currentReceiveArchive = null;
                 this.connectionManager.setArchiveInfo(null);
                 this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
