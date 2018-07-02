@@ -1,12 +1,17 @@
 package br.com.phdev.faciltransferencia;
 
+import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
+import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -30,6 +35,7 @@ import phdev.com.br.faciltransferencia.R;
 public class MainActivity extends AppCompatActivity implements Connection.OnClientConnectionTCPStatusListener, TransferStatusListener {
 
     public static final String TAG = "MyApp";
+    private final int PERMISSIONS_NEEDED = 0;
 
     private TransferManager transferManager;
 
@@ -53,8 +59,11 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         setContentView(R.layout.activity_main);
 
         this.mainView = (ViewGroup) findViewById(R.id.mainView);
+        this.mainView.setVisibility(View.VISIBLE);
+        this.mainView.setAlpha(1f);
         this.connectedView = (ViewGroup) findViewById(R.id.connectedView);
-        this.connectedView.setAlpha(1f);
+        this.connectedView.setAlpha(0f);
+        this.connectedView.setVisibility(View.GONE);
 
         this.listViewArchives = (ListView) findViewById(R.id.listView);
         this.listViewArchives.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -110,7 +119,31 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         this.editText.setText(Build.MODEL);
 
         this.progressBar_receiving = (ProgressBar) findViewById(R.id.progressBar_receiving);
+        this.progressBar_receiving.setVisibility(View.INVISIBLE);
 
+        if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
+            int internetPermissions = ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET);
+            int writePermissions = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+            int readPermissions = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
+            if (internetPermissions != PackageManager.PERMISSION_GRANTED || writePermissions != PackageManager.PERMISSION_GRANTED
+                    || readPermissions != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.INTERNET, Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE}, PERMISSIONS_NEEDED);
+            }
+        }
+
+    }
+
+    @Override
+    public void onRequestPermissionsResult (int requestCode, String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case PERMISSIONS_NEEDED:
+                if (grantResults.length > 2 && grantResults[0] != PackageManager.PERMISSION_GRANTED
+                        && grantResults[1] != PackageManager.PERMISSION_GRANTED
+                        && grantResults[2] != PackageManager.PERMISSION_GRANTED) {
+                    super.onBackPressed();
+                }
+        }
     }
 
     private void fadeToConnected() {
@@ -148,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     @Override
     public void onBackPressed() {
         if (this.mainView.getAlpha() == 0)
-            fadeToMain();
+            onDisconnect("Conexão encerrada pelo usuário");
         else
             super.onBackPressed();
     }

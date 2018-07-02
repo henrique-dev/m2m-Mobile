@@ -1,7 +1,3 @@
 <resources>
     <string name="app_name">Mim2Mim</string>
-    <string name="action_about">Sobre</string>
-    <string name="label_info">1. Abra o programa em seu computador.\n
-        2. Após, clique no botão com a lupa abaixo.\n
-        3. Seja feliz :D</string>
 </resources>
