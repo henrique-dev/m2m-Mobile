@@ -18,6 +18,6 @@ package br.com.phdev.faciltransferencia.transfer.interfaces;
  */
 public interface OnObjectReceivedListener {
 
-    int onObjectReceived(Object obj);
+    void onObjectReceived(Object obj);
 
 }

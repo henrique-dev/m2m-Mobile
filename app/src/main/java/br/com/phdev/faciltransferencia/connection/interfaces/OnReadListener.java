@@ -21,6 +21,6 @@ import br.com.phdev.faciltransferencia.exceptions.WrongPacketException;
  */
 public interface OnReadListener {
 
-    int onRead(final byte[] buffer, int bufferSize);
+    void onRead(final byte[] buffer, int bufferSize);
 
 }

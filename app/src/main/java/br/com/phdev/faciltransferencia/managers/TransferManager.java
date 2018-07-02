@@ -3,14 +3,11 @@ package br.com.phdev.faciltransferencia.managers;
 import android.os.Environment;
 import android.util.Log;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectInput;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
@@ -21,7 +18,7 @@ import br.com.phdev.faciltransferencia.MainActivity;
 import br.com.phdev.faciltransferencia.connection.TCPServer;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.transfer.Archive;
-import br.com.phdev.faciltransferencia.transfer.SizeInfo;
+import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnObjectReceivedListener;
 import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListener;
 
@@ -50,6 +47,8 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
     private WriteListener writeListener;
 
     private List<Archive> archives;
+
+    private Archive currentReceiveArchive;
 
     public TransferManager(MainActivity context, String userName) {
         this.connectionManager = new ConnectionManager(context,this);
@@ -128,17 +127,23 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
     }
 
     @Override
-    public int onObjectReceived(Object obj) {
-        if (obj instanceof SizeInfo) {
-            SizeInfo sf = (SizeInfo) obj;
+    public void onObjectReceived(Object obj) {
+        if (obj instanceof ArchiveInfo) {
+            ArchiveInfo archiveInfo = (ArchiveInfo) obj;
+            this.currentReceiveArchive = new Archive();
+            this.currentReceiveArchive.setName(archiveInfo.getArchiveName());
+            this.connectionManager.setArchiveInfo(archiveInfo);
             this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_FILE);
             this.writeListener.write(getBytesFromObject("sm"));
-            return sf.getSize();
         } else if (obj instanceof Archive) {
             Archive fileReceived = (Archive)obj;
             writeFile(fileReceived);
-            return 512;
+        } else if (obj instanceof byte[]) {
+            this.currentReceiveArchive.setBytes((byte[])obj);
+            this.writeFile(this.currentReceiveArchive);
+            this.currentReceiveArchive = null;
+            this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
+            this.writeListener.write(getBytesFromObject("cango"));
         }
-        return 512;
     }
 }

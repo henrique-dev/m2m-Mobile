@@ -15,6 +15,7 @@ import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
 import br.com.phdev.faciltransferencia.connection.interfaces.OnReadListener;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.MainActivity;
+import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
 
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
@@ -43,7 +44,7 @@ public class TCPServer extends Thread implements WriteListener {
     private InputStream in;
     private OutputStream out;
 
-    private int bufferSize = BUFFER_MSG_SIZE;
+    private ArchiveInfo archiveInfo;
 
     public static final int RECEIVING_TYPE_FILE = 0;
     public static final int RECEIVING_TYPE_MSG = 1;
@@ -65,6 +66,10 @@ public class TCPServer extends Thread implements WriteListener {
         this.onReadListener = onReadListener;
         this.guiConnectAlert = guiConnectAlert;
         this.broadcastConnectAlert = broadcastConnectAlert;
+    }
+
+    public void setArchiveInfo(ArchiveInfo archiveInfo) {
+        this.archiveInfo = archiveInfo;
     }
 
     public void setReceivingType(int receivingType) {
@@ -114,35 +119,34 @@ public class TCPServer extends Thread implements WriteListener {
                 int totalDataReaded = 0;
                 int dataReaded;
 
-                Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + bufferSize);
-                byte[] buffer = new byte[bufferSize];
-                byte[] finalBuffer = new byte[bufferSize];
+                byte[] buffer;
+                byte[] finalBuffer;
 
-                while (totalDataReaded < buffer.length) {
+                if (receivingType == RECEIVING_TYPE_MSG) {
+                    Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + 512);
+                    buffer = new byte[512];
+                    finalBuffer = new byte[512];
                     dataReaded = in.read(buffer);
                     for (int i=0; i<dataReaded; i++) {
                         finalBuffer[totalDataReaded + i] = buffer[i];
                     }
                     totalDataReaded += dataReaded;
-                    if (receivingType == RECEIVING_TYPE_MSG) {
-                        try {
-                            bufferSize = TCPServer.this.onReadListener.onRead(finalBuffer, totalDataReaded);
-                            Log.e(MainActivity.TAG, "Tamanho do arquivo a ser recebido: " + bufferSize);
-                            break;
-                        } catch (Exception e) {
-                            Log.d(MainActivity.TAG, e.getMessage());
+                    TCPServer.this.onReadListener.onRead(finalBuffer, totalDataReaded);
+                } else {
+                    Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + archiveInfo.getArchiveLength());
+                    buffer = new byte[(int)archiveInfo.getArchiveLength()];
+                    finalBuffer = new byte[(int)archiveInfo.getArchiveLength()];
+                    while (totalDataReaded < buffer.length) {
+                        dataReaded = in.read(buffer);
+                        for (int i=0; i<dataReaded; i++) {
+                            finalBuffer[totalDataReaded + i] = buffer[i];
                         }
+                        totalDataReaded += dataReaded;
+                        this.socket.setSoTimeout(20000);
                     }
+                    this.onReadListener.onRead(finalBuffer, 0);
                 }
-                if (receivingType == RECEIVING_TYPE_FILE && receivingStatus == RECEIVING_STATUS_READY) {
-                    bufferSize = this.onReadListener.onRead(finalBuffer, totalDataReaded);
-                    receivingStatus = RECEIVING_STATUS_WAITING;
-                    this.socket.setSoTimeout(0);
-                }
-                if (receivingType == RECEIVING_TYPE_FILE && receivingStatus == RECEIVING_STATUS_WAITING) {
-                    receivingStatus = RECEIVING_STATUS_READY;
-                    this.socket.setSoTimeout(20000);
-                }
+                this.socket.setSoTimeout(0);
             }
         } catch (InterruptedIOException e) {
             if (this.guiConnectAlert != null)

@@ -13,6 +13,7 @@ import br.com.phdev.faciltransferencia.connection.BroadcastSender;
 import br.com.phdev.faciltransferencia.connection.interfaces.OnReadListener;
 import br.com.phdev.faciltransferencia.connection.TCPServer;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
+import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnObjectReceivedListener;
 
 /*
@@ -62,13 +63,20 @@ public class ConnectionManager implements OnReadListener{
         return TCPServer;
     }
 
+    public void setArchiveInfo(ArchiveInfo archiveInfo) {
+        this.TCPServer.setArchiveInfo(archiveInfo);
+    }
+
     public void setConnectionReceivingType(int receivingType) {
         TCPServer.setReceivingType(receivingType);
     }
 
     @Override
-    public int onRead(byte[] buffer, int bufferSize){
-        return this.onObjectReceivedListener.onObjectReceived(getObjectFromBytes(buffer, bufferSize));
+    public void onRead(byte[] buffer, int bufferSize){
+        if (bufferSize > 0)
+            this.onObjectReceivedListener.onObjectReceived(getObjectFromBytes(buffer, bufferSize));
+        else
+            this.onObjectReceivedListener.onObjectReceived(buffer);
     }
 
     private Object getObjectFromBytes(byte[] buffer, int bufferSize) {
