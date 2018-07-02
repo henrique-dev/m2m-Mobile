@@ -18,12 +18,13 @@ import java.io.Serializable;
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public class ArchiveInfo implements Serializable {
+public class ArchiveInfo implements Serializable{
 
     private String archiveName;
     private long archiveLength;
     private int fragmentsAmount;
     private int fragmentLength;
+    private int lastFragmentLength;
 
     public String getArchiveName() {
         return archiveName;
@@ -55,6 +56,14 @@ public class ArchiveInfo implements Serializable {
 
     public void setFragmentLength(int fragmentLength) {
         this.fragmentLength = fragmentLength;
+    }
+
+    public int getLastFragmentLength() {
+        return lastFragmentLength;
+    }
+
+    public void setLastFragmentLength(int lastFragmentLength) {
+        this.lastFragmentLength = lastFragmentLength;
     }
 
 }

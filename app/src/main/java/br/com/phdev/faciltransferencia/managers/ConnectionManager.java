@@ -14,6 +14,7 @@ import br.com.phdev.faciltransferencia.connection.interfaces.OnReadListener;
 import br.com.phdev.faciltransferencia.connection.TCPServer;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
+import br.com.phdev.faciltransferencia.transfer.FragmentArchive;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnObjectReceivedListener;
 
 /*
@@ -72,11 +73,19 @@ public class ConnectionManager implements OnReadListener{
     }
 
     @Override
-    public void onRead(byte[] buffer, int bufferSize){
+    public void onRead(byte[] buffer, int bufferSize, boolean fragment){
         if (bufferSize > 0)
             this.onObjectReceivedListener.onObjectReceived(getObjectFromBytes(buffer, bufferSize));
-        else
-            this.onObjectReceivedListener.onObjectReceived(buffer);
+        else {
+            if (fragment) {
+                if (buffer == null)
+                    this.onObjectReceivedListener.onObjectReceived(new FragmentArchive(null, true));
+                else
+                    this.onObjectReceivedListener.onObjectReceived(new FragmentArchive(buffer, false));
+            }
+            else
+                this.onObjectReceivedListener.onObjectReceived(buffer);
+        }
     }
 
     private Object getObjectFromBytes(byte[] buffer, int bufferSize) {

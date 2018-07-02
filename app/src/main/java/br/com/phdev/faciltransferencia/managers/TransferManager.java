@@ -1,16 +1,23 @@
 package br.com.phdev.faciltransferencia.managers;
 
+import android.content.Context;
+import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.net.URI;
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +26,7 @@ import br.com.phdev.faciltransferencia.connection.TCPServer;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.transfer.Archive;
 import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
+import br.com.phdev.faciltransferencia.transfer.FragmentArchive;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnObjectReceivedListener;
 import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListener;
 
@@ -42,20 +50,21 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
 
     private final String TAG = "myApp.TransferManager";
 
-    private TransferStatusListener transferStatusListener;
+    private MainActivity mainActivity;
     private ConnectionManager connectionManager;
     private WriteListener writeListener;
 
     private List<Archive> archives;
 
     private Archive currentReceiveArchive;
+    private List<File> currentReceiveArchiveInFragments;
 
-    public TransferManager(MainActivity context, String userName) {
-        this.connectionManager = new ConnectionManager(context,this);
+    public TransferManager(MainActivity mainActivity, String userName) {
+        this.connectionManager = new ConnectionManager(mainActivity,this);
         this.connectionManager.startBroadcastSender(userName);
         this.connectionManager.startTCPServer();
         this.writeListener = this.connectionManager.getWriteListener();
-        this.transferStatusListener = context;
+        this.mainActivity = mainActivity;
         this.archives = new ArrayList<>();
     }
 
@@ -114,13 +123,67 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 archive.setBytes(null);
                 archive.setPath(pathAndName);
                 this.archives.add(archive);
-                this.transferStatusListener.onSendComplete();
-                this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
-                this.writeListener.write(getBytesFromObject("cango"));
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "Falha ao salvar o arquivo. " + e.getMessage());
             } catch (IOException e) {
                 Log.e(TAG, "Falha ao salvar o arquivo. " + e.getMessage());
+            }
+        } else
+            Log.e(TAG, "Não é possivel armazenar!!!");
+    }
+
+    private void writeFragment(FragmentArchive fragmentArchive) {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
+            if (absolutePath.mkdir())
+                Log.d(TAG, "Diretorio criado");
+
+            try {
+                String pathAndName = absolutePath + "/" + fragmentArchive.getName();
+                FileOutputStream fos = new FileOutputStream(pathAndName);
+                fos.write(fragmentArchive.getBytes());
+                fos.flush();
+                fos.close();
+                Log.d(TAG, "Fragmento criado com sucesso.");
+                this.currentReceiveArchiveInFragments.add(new File(pathAndName));
+            } catch (FileNotFoundException e) {
+                Log.e(TAG, "Falha ao salvar o arquivo. " + e.getMessage());
+            } catch (IOException e) {
+                Log.e(TAG, "Falha ao salvar o arquivo. " + e.getMessage());
+            }
+        } else
+            Log.e(TAG, "Não é possivel armazenar!!!");
+    }
+
+    private void mergeFragments() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
+            if (absolutePath.mkdir())
+                Log.d(TAG, "Diretorio criado");
+
+            try {
+                String pathAndName = absolutePath + "/" + this.currentReceiveArchive.getName();
+                FileOutputStream fos = new FileOutputStream(pathAndName);
+                FileChannel outFile = fos.getChannel();
+                Log.d(MainActivity.TAG, "Tamanho do outFile.size: " + outFile.size());
+                for (File fragmentFile : this.currentReceiveArchiveInFragments) {
+                    FileInputStream fis = new FileInputStream(fragmentFile.getPath());
+                    FileChannel inFile = fis.getChannel();
+                    inFile.transferTo(0, inFile.size(), outFile);
+                    inFile.close();
+                    fis.close();
+                    fragmentFile.delete();
+                }
+                outFile.close();
+                fos.flush();
+                fos.close();
+                Log.d(TAG, "Arquivo criado com sucesso.");
+            } catch (FileNotFoundException e) {
+                Log.e(TAG, "Erro ao salvar arquivo!" + e.getMessage());
+            } catch (IOException e) {
+                Log.e(TAG, "Erro ao salvar arquivo!" + e.getMessage());
             }
         } else
             Log.e(TAG, "Não é possivel armazenar!!!");
@@ -134,14 +197,31 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
             this.currentReceiveArchive.setName(archiveInfo.getArchiveName());
             this.connectionManager.setArchiveInfo(archiveInfo);
             this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_FILE);
+            if (archiveInfo.getFragmentsAmount() > 1) {
+                currentReceiveArchiveInFragments = new ArrayList<>();
+            }
             this.writeListener.write(getBytesFromObject("sm"));
-        } else if (obj instanceof Archive) {
-            Archive fileReceived = (Archive)obj;
-            writeFile(fileReceived);
+        } else if (obj instanceof FragmentArchive) {
+            FragmentArchive fragmentArchive = (FragmentArchive) obj;
+            if (fragmentArchive.isLast()) {
+                this.mergeFragments();
+                this.currentReceiveArchive = null;
+                this.connectionManager.setArchiveInfo(null);
+                this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
+                this.writeListener.write(getBytesFromObject("cango"));
+                this.currentReceiveArchiveInFragments.clear();
+                this.currentReceiveArchiveInFragments = null;
+            } else {
+                fragmentArchive.setName(currentReceiveArchive.getName() + "_frg" + currentReceiveArchiveInFragments.size());
+                writeFragment(fragmentArchive);
+                this.writeListener.write(getBytesFromObject("smf"));
+            }
         } else if (obj instanceof byte[]) {
             this.currentReceiveArchive.setBytes((byte[])obj);
             this.writeFile(this.currentReceiveArchive);
+            this.mainActivity.onSendComplete();
             this.currentReceiveArchive = null;
+            this.connectionManager.setArchiveInfo(null);
             this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
             this.writeListener.write(getBytesFromObject("cango"));
         }

@@ -131,20 +131,48 @@ public class TCPServer extends Thread implements WriteListener {
                         finalBuffer[totalDataReaded + i] = buffer[i];
                     }
                     totalDataReaded += dataReaded;
-                    TCPServer.this.onReadListener.onRead(finalBuffer, totalDataReaded);
+                    TCPServer.this.onReadListener.onRead(finalBuffer, totalDataReaded, false);
                 } else {
-                    Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + archiveInfo.getArchiveLength());
-                    buffer = new byte[(int)archiveInfo.getArchiveLength()];
-                    finalBuffer = new byte[(int)archiveInfo.getArchiveLength()];
-                    while (totalDataReaded < buffer.length) {
-                        dataReaded = in.read(buffer);
-                        for (int i=0; i<dataReaded; i++) {
-                            finalBuffer[totalDataReaded + i] = buffer[i];
+                    Log.d(MainActivity.TAG, "Recebendo arquivo: " + archiveInfo.getArchiveName());
+                    if (archiveInfo.getFragmentsAmount() > 1) {
+                        Log.d(MainActivity.TAG, "Recebendo arquivo fragmentado");
+
+                        for (int i=0; i<archiveInfo.getFragmentsAmount(); i++) {
+                            if (i == archiveInfo.getFragmentsAmount()-1 && archiveInfo.getLastFragmentLength() != 0) {
+                                buffer = new byte[archiveInfo.getLastFragmentLength()];
+                                finalBuffer = new byte[archiveInfo.getLastFragmentLength()];
+                            } else {
+                                buffer = new byte[archiveInfo.getFragmentLength()];
+                                finalBuffer = new byte[archiveInfo.getFragmentLength()];
+                            }
+                            Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + finalBuffer.length);
+                            while (totalDataReaded < buffer.length) {
+                                dataReaded = in.read(buffer);
+                                for (int j=0; j<dataReaded; j++) {
+                                    finalBuffer[totalDataReaded + j] = buffer[j];
+                                }
+                                totalDataReaded += dataReaded;
+                                this.socket.setSoTimeout(20000);
+                            }
+                            Log.d(MainActivity.TAG, "Fragmento " + (i+1) + " recebido. Tamanho: " + totalDataReaded);
+                            this.onReadListener.onRead(finalBuffer, 0, true);
+                            totalDataReaded = 0;
                         }
-                        totalDataReaded += dataReaded;
-                        this.socket.setSoTimeout(20000);
+                        this.onReadListener.onRead(null, 0, true);
+                    } else {
+                        Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + archiveInfo.getArchiveLength());
+                        buffer = new byte[(int)archiveInfo.getArchiveLength()];
+                        finalBuffer = new byte[(int)archiveInfo.getArchiveLength()];
+                        while (totalDataReaded < buffer.length) {
+                            dataReaded = in.read(buffer);
+                            for (int i=0; i<dataReaded; i++) {
+                                finalBuffer[totalDataReaded + i] = buffer[i];
+                            }
+                            totalDataReaded += dataReaded;
+                            this.socket.setSoTimeout(20000);
+                        }
+                        this.onReadListener.onRead(finalBuffer, 0, false);
                     }
-                    this.onReadListener.onRead(finalBuffer, 0);
                 }
                 this.socket.setSoTimeout(0);
             }
