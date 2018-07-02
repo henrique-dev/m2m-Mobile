@@ -55,7 +55,7 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
     private ConnectionManager connectionManager;
     private WriteListener writeListener;
 
-    private List<Archive> archives;
+    //private List<Archive> archives;
 
     private Archive currentReceiveArchive;
     private List<File> currentReceiveArchiveInFragments;
@@ -66,12 +66,12 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
         this.connectionManager.startTCPServer();
         this.writeListener = this.connectionManager.getWriteListener();
         this.mainActivity = mainActivity;
-        this.archives = new ArrayList<>();
+        //this.archives = new ArrayList<>();
     }
 
-    public List<Archive> getArchivesList() {
-        return this.archives;
-    }
+    //public List<Archive> getArchivesList() {
+      //  return this.archives;
+    //}
 
     public void close() {
         this.connectionManager.close();
@@ -121,9 +121,11 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 fos.flush();
                 fos.close();
                 Log.d(TAG, "Arquivo criado com sucesso.");
+                new File(pathAndName).setLastModified(System.nanoTime());
                 archive.setBytes(null);
                 archive.setPath(pathAndName);
-                this.archives.add(archive);
+                //this.archives.add(archive);
+                this.mainActivity.onSendComplete(archive);
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "Falha ao salvar o arquivo. " + e.getMessage());
             } catch (IOException e) {
@@ -179,8 +181,10 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 outFile.close();
                 fos.flush();
                 fos.close();
+                new File(pathAndName).setLastModified(System.nanoTime());
                 currentReceiveArchive.setPath(pathAndName);
-                this.archives.add(currentReceiveArchive);
+                this.mainActivity.onSendComplete(currentReceiveArchive);
+                //this.archives.add(currentReceiveArchive);
                 Log.d(TAG, "Arquivo criado com sucesso.");
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "Erro ao salvar arquivo!" + e.getMessage());
@@ -224,7 +228,6 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
             FragmentArchive fragmentArchive = (FragmentArchive) obj;
             if (fragmentArchive.isLast()) {
                 this.mergeFragments();
-                this.mainActivity.onSendComplete();
                 this.currentReceiveArchive = null;
                 this.connectionManager.setArchiveInfo(null);
                 this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);
@@ -239,7 +242,6 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
         } else if (obj instanceof byte[]) {
             this.currentReceiveArchive.setBytes((byte[])obj);
             this.writeFile(this.currentReceiveArchive);
-            this.mainActivity.onSendComplete();
             this.currentReceiveArchive = null;
             this.connectionManager.setArchiveInfo(null);
             this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_MSG);

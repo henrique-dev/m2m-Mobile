@@ -1,5 +1,6 @@
 package br.com.phdev.faciltransferencia.connection;
 
+import android.os.Build;
 import android.util.Log;
 
 import java.io.IOException;
@@ -103,7 +104,7 @@ public class TCPServer extends Thread implements WriteListener {
             {
                 serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
-                serverSocket.setSoTimeout(5000);
+                serverSocket.setSoTimeout(10000);
                 serverSocket.bind(new InetSocketAddress(TRANSFER_PORT));
                 this.socket = serverSocket.accept();
                 this.serverSocket.close();

@@ -6,6 +6,7 @@ import android.animation.AnimatorListenerAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -16,6 +17,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.MimeTypeMap;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -23,6 +25,7 @@ import android.widget.ListView;
 import android.widget.ProgressBar;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
@@ -49,6 +52,7 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     private ProgressBar progressBar_receiving;
 
     private ListView listViewArchives;
+    private ArchiveAdapter archiveAdapter;
 
     private List<Archive> archivesList;
 
@@ -112,6 +116,8 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
                 MainActivity.this.button.setEnabled(false);
                 MainActivity.this.progressBar_connecting.setVisibility(View.VISIBLE);
                 String userName = MainActivity.this.editText.getText().toString();
+                if (userName.equals(""))
+                    userName = Build.MODEL;
                 MainActivity.this.transferManager = new TransferManager(MainActivity.this, userName);
             }
         });
@@ -204,7 +210,9 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
             @Override
             public void run() {
                 MainActivity.this.fadeToConnected();
-                MainActivity.this.archivesList = MainActivity.this.transferManager.getArchivesList();
+                MainActivity.this.archivesList = new ArrayList<>();
+                MainActivity.this.archiveAdapter = new ArchiveAdapter(MainActivity.this, MainActivity.this.archivesList);
+                MainActivity.this.listViewArchives.setAdapter(MainActivity.this.archiveAdapter);
             }
         });
     }
@@ -220,12 +228,16 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     }
 
     @Override
-    public void onSendComplete() {
+    public void onSendComplete(final Archive archive) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                ArchiveAdapter archiveAdapter = new ArchiveAdapter(MainActivity.this, MainActivity.this.archivesList);
-                MainActivity.this.listViewArchives.setAdapter(archiveAdapter);
+                try {
+                    archiveAdapter.add(archive);
+                    MediaScannerConnection.scanFile(MainActivity.this, new String[]{archive.getPath()},
+                            new String[]{MimeTypeMap.getFileExtensionFromUrl(archive.getPath())}, null);
+                    archiveAdapter.notifyDataSetChanged();
+                } catch (Exception e) {}
                 MainActivity.this.progressBar_receiving.setVisibility(View.INVISIBLE);
             }
         });

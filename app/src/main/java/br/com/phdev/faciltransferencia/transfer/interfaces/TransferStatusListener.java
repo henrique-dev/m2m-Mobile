@@ -1,5 +1,7 @@
 package br.com.phdev.faciltransferencia.transfer.interfaces;
 
+import br.com.phdev.faciltransferencia.transfer.Archive;
+
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
  *
@@ -19,7 +21,7 @@ package br.com.phdev.faciltransferencia.transfer.interfaces;
 public interface TransferStatusListener {
 
     void onSending();
-    void onSendComplete();
+    void onSendComplete(Archive archive);
     void noSpace();
 
 }
