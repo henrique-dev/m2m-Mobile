@@ -9,12 +9,11 @@ Para baixar o último lançamento da aplicação, [clique aqui](https://play.goo
 ### Funções atuais
 - [X] Recebimento de arquivos do computador.
 - [X] Pareamento automático entre smartphone e computador.
-- [X] Tamanho máximo do arquivo para recebimento: 30Mb.
+- [X] Tamanho máximo do arquivo para recebimento: ilimitado.
 
 ### Proximas funções
 - [ ] Transferência do smartphone para o computador.
 - [ ] Pareamente manual entre smartphone e computador.
-- [ ] Aumento do tamanho máximo de envio e recebimento de arquivos para 200Mb.
 
 ### Descrição
 
