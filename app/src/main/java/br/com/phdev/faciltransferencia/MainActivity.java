@@ -251,7 +251,6 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
                     String ext = MimeTypeMap.getFileExtensionFromUrl(archive.getPath());
                     MediaScannerConnection.scanFile(MainActivity.this, new String[]{archive.getPath()},
                             new String[]{ext}, null);
-                    Log.d(TAG, "MIMETYPE: " + ext);
                     archiveAdapter.notifyDataSetChanged();
                 } catch (Exception e) {}
                 MainActivity.this.progressBar_receiving.setVisibility(View.INVISIBLE);

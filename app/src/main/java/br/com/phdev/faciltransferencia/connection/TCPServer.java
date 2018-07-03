@@ -132,6 +132,7 @@ public class TCPServer extends Thread implements WriteListener {
                     TCPServer.this.onReadListener.onRead(finalBuffer, totalDataReaded, false);
                 } else {
                     Log.d(MainActivity.TAG, "Recebendo arquivo: " + archiveInfo.getArchiveName());
+                    long startTime = System.nanoTime();
                     if (archiveInfo.getFragmentsAmount() > 1) {
                         Log.d(MainActivity.TAG, "Recebendo arquivo fragmentado");
 
@@ -148,18 +149,16 @@ public class TCPServer extends Thread implements WriteListener {
                                 totalDataReaded += dataRead;
                                 progressMadeListener.updateProgressBar(currentProgress);
                                 this.socket.setSoTimeout(20000);
-
-                                /*
-                                totalDataReaded += in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
-                                currentProgress += totalDataReaded;
-                                progressMadeListener.updateProgressBar(currentProgress);
-                                this.socket.setSoTimeout(20000);
-                                */
                             }
                             Log.d(MainActivity.TAG, "Fragmento " + (i+1) + " recebido. Tamanho: " + totalDataReaded);
                             this.onReadListener.onRead(finalBuffer, 0, true);
                             totalDataReaded = 0;
                         }
+                        long finalTime = (System.nanoTime() - startTime) / 1000000;
+                        Log.d(MainActivity.TAG, "Tempo total de transferência: " + finalTime + " milisegundos");
+                        Log.d(MainActivity.TAG, "Taxa de transferencia média final: " +
+                                (((double)archiveInfo.getArchiveLength() / (1024))/(((double)finalTime)/1000)) + " KB/s");
+
                         this.onReadListener.onRead(null, 0, true);
                     } else {
                         Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + archiveInfo.getArchiveLength());
@@ -170,14 +169,12 @@ public class TCPServer extends Thread implements WriteListener {
                             totalDataReaded += dataRead;
                             progressMadeListener.updateProgressBar(currentProgress);
                             this.socket.setSoTimeout(20000);
-
-                            /*
-                            totalDataReaded += in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
-                            currentProgress = totalDataReaded;
-                            progressMadeListener.updateProgressBar(currentProgress);
-                            this.socket.setSoTimeout(20000);
-                            */
                         }
+                        long finalTime = (System.nanoTime() - startTime) / 1000000;
+                        Log.d(MainActivity.TAG, "Tempo total de transferência: " + finalTime + " milisegundos");
+                        Log.d(MainActivity.TAG, "Taxa de transferencia média final: " +
+                                (((double)archiveInfo.getArchiveLength() / (1024))/(((double)finalTime)/1000)) + " KB/s");
+
                         this.onReadListener.onRead(finalBuffer, 0, false);
                     }
                 }
