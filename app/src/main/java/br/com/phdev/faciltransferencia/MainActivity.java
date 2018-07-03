@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.MimeTypeFilter;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
@@ -32,10 +33,11 @@ import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
 import br.com.phdev.faciltransferencia.customviews.ArchiveAdapter;
 import br.com.phdev.faciltransferencia.managers.TransferManager;
 import br.com.phdev.faciltransferencia.transfer.Archive;
+import br.com.phdev.faciltransferencia.transfer.interfaces.OnProgressMadeListener;
 import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListener;
 import phdev.com.br.faciltransferencia.R;
 
-public class MainActivity extends AppCompatActivity implements Connection.OnClientConnectionTCPStatusListener, TransferStatusListener {
+public class MainActivity extends AppCompatActivity implements Connection.OnClientConnectionTCPStatusListener, TransferStatusListener, OnProgressMadeListener {
 
     public static final String TAG = "MyApp";
     private final int PERMISSIONS_NEEDED = 0;
@@ -218,11 +220,23 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     }
 
     @Override
-    public void onSending() {
+    public void onSending(final int fileSize) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 MainActivity.this.progressBar_receiving.setVisibility(View.VISIBLE);
+                MainActivity.this.progressBar_receiving.setProgress(0);
+                MainActivity.this.progressBar_receiving.setMax(fileSize);
+            }
+        });
+    }
+
+    @Override
+    public void updateProgressBar(final int amount) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                MainActivity.this.progressBar_receiving.setProgress(amount);
             }
         });
     }
@@ -234,8 +248,10 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
             public void run() {
                 try {
                     archiveAdapter.add(archive);
+                    String ext = MimeTypeMap.getFileExtensionFromUrl(archive.getPath());
                     MediaScannerConnection.scanFile(MainActivity.this, new String[]{archive.getPath()},
-                            new String[]{MimeTypeMap.getFileExtensionFromUrl(archive.getPath())}, null);
+                            new String[]{ext}, null);
+                    Log.d(TAG, "MIMETYPE: " + ext);
                     archiveAdapter.notifyDataSetChanged();
                 } catch (Exception e) {}
                 MainActivity.this.progressBar_receiving.setVisibility(View.INVISIBLE);

@@ -17,6 +17,7 @@ import br.com.phdev.faciltransferencia.connection.interfaces.OnReadListener;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.MainActivity;
 import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
+import br.com.phdev.faciltransferencia.transfer.interfaces.OnProgressMadeListener;
 
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
@@ -59,13 +60,15 @@ public class TCPServer extends Thread implements WriteListener {
     private OnReadListener onReadListener;
     private Connection.OnClientConnectionTCPStatusListener guiConnectAlert;
     private Connection.OnClientConnectionTCPStatusListener broadcastConnectAlert;
+    private OnProgressMadeListener progressMadeListener;
 
     private boolean connected = false;
 
-    public TCPServer(Connection.OnClientConnectionTCPStatusListener guiConnectAlert,
+    public TCPServer(MainActivity mainActivity,
                      Connection.OnClientConnectionTCPStatusListener broadcastConnectAlert, OnReadListener onReadListener) {
         this.onReadListener = onReadListener;
-        this.guiConnectAlert = guiConnectAlert;
+        this.guiConnectAlert = mainActivity;
+        this.progressMadeListener = mainActivity;
         this.broadcastConnectAlert = broadcastConnectAlert;
     }
 
@@ -117,7 +120,9 @@ public class TCPServer extends Thread implements WriteListener {
             this.in = this.socket.getInputStream();
 
             while (true) {
+                int currentProgress = 0;
                 int totalDataReaded = 0;
+                int dataRead = 0;
                 byte[] finalBuffer;
 
                 if (receivingType == RECEIVING_TYPE_MSG) {
@@ -138,8 +143,18 @@ public class TCPServer extends Thread implements WriteListener {
                             }
                             Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + finalBuffer.length);
                             while (totalDataReaded < finalBuffer.length) {
-                                totalDataReaded += in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                                dataRead = in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                                currentProgress += dataRead;
+                                totalDataReaded += dataRead;
+                                progressMadeListener.updateProgressBar(currentProgress);
                                 this.socket.setSoTimeout(20000);
+
+                                /*
+                                totalDataReaded += in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                                currentProgress += totalDataReaded;
+                                progressMadeListener.updateProgressBar(currentProgress);
+                                this.socket.setSoTimeout(20000);
+                                */
                             }
                             Log.d(MainActivity.TAG, "Fragmento " + (i+1) + " recebido. Tamanho: " + totalDataReaded);
                             this.onReadListener.onRead(finalBuffer, 0, true);
@@ -148,11 +163,20 @@ public class TCPServer extends Thread implements WriteListener {
                         this.onReadListener.onRead(null, 0, true);
                     } else {
                         Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + archiveInfo.getArchiveLength());
-                        //buffer = new byte[(int)archiveInfo.getArchiveLength()];
                         finalBuffer = new byte[(int)archiveInfo.getArchiveLength()];
                         while (totalDataReaded < finalBuffer.length) {
-                            totalDataReaded += in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                            dataRead = in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                            currentProgress += dataRead;
+                            totalDataReaded += dataRead;
+                            progressMadeListener.updateProgressBar(currentProgress);
                             this.socket.setSoTimeout(20000);
+
+                            /*
+                            totalDataReaded += in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                            currentProgress = totalDataReaded;
+                            progressMadeListener.updateProgressBar(currentProgress);
+                            this.socket.setSoTimeout(20000);
+                            */
                         }
                         this.onReadListener.onRead(finalBuffer, 0, false);
                     }

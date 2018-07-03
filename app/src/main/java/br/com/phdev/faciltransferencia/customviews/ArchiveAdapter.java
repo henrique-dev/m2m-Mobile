@@ -6,6 +6,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.List;
@@ -40,10 +41,30 @@ public class ArchiveAdapter extends ArrayAdapter<Archive> {
         if (convertView == null)
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.row_layout, parent, false);
         TextView archiveName = (TextView) convertView.findViewById(R.id.archiveName);
+        ImageView imageView = (ImageView) convertView.findViewById(R.id.imageView);
         Archive archive = getItem(position);
-        if (archive != null)
+
+        if (archive != null) {
             if (archiveName != null)
                 archiveName.setText(archive.getName());
+            switch (Archive.checkFileExtension(archive.getName())) {
+                case IMAGE:
+                    imageView.setImageResource(R.drawable.baseline_photo_library_black_48);
+                    break;
+                case DOCUMENT:
+                    imageView.setImageResource(R.drawable.baseline_library_books_black_48);
+                    break;
+                case MUSIC:
+                    imageView.setImageResource(R.drawable.baseline_library_music_black_48);
+                    break;
+                case VIDEO:
+                    imageView.setImageResource(R.drawable.baseline_video_library_black_48);
+                    break;
+                case UNDEFINED:
+                    imageView.setImageResource(R.drawable.baseline_filter_none_black_48);
+                    break;
+            }
+        }
         return convertView;
     }
 }

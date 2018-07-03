@@ -18,7 +18,9 @@ import java.io.Serializable;
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public class Archive implements Serializable {
+public class Archive {
+
+    public enum FILE_TYPE {VIDEO, IMAGE, MUSIC, DOCUMENT, UNDEFINED}
 
     private String name;
     private String path;
@@ -51,6 +53,20 @@ public class Archive implements Serializable {
 
     public void setStatusTranfer(int status) {
         this.statusTransfer = status;
+    }
+
+    public static FILE_TYPE checkFileExtension(String fileName) {
+        fileName = fileName.toLowerCase();
+        if (fileName.endsWith(".png") || fileName.endsWith(".jpg") || fileName.endsWith(".jpeg") || fileName.endsWith(".gif"))
+            return FILE_TYPE.IMAGE;
+        else if (fileName.endsWith(".mp4") || fileName.endsWith(".avi") || fileName.endsWith(".3gp") || fileName.endsWith(".mkv"))
+            return FILE_TYPE.VIDEO;
+        else if (fileName.endsWith(".mp3") || fileName.endsWith(".wav") || fileName.endsWith(".midi"))
+            return FILE_TYPE.MUSIC;
+        else if (fileName.endsWith(".doc") || fileName.endsWith(".txt") || fileName.endsWith(".docx") || fileName.endsWith(".pdf"))
+            return FILE_TYPE.DOCUMENT;
+        else
+            return FILE_TYPE.UNDEFINED;
     }
 
     @Override

@@ -1,7 +1,5 @@
 package br.com.phdev.faciltransferencia.transfer.interfaces;
 
-import br.com.phdev.faciltransferencia.transfer.Archive;
-
 /*
  * Copyright (C) 2018 Paulo Henrique Gonçalves Bacelar
  *
@@ -18,10 +16,8 @@ import br.com.phdev.faciltransferencia.transfer.Archive;
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public interface TransferStatusListener {
+public interface OnProgressMadeListener {
 
-    void onSending(int fileSize);
-    void onSendComplete(Archive archive);
-    void noSpace();
+    void updateProgressBar(int amount);
 
 }

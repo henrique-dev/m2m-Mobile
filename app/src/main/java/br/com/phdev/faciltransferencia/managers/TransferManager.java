@@ -28,6 +28,7 @@ import br.com.phdev.faciltransferencia.transfer.Archive;
 import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
 import br.com.phdev.faciltransferencia.transfer.FragmentArchive;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnObjectReceivedListener;
+import br.com.phdev.faciltransferencia.transfer.interfaces.OnProgressMadeListener;
 import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListener;
 
 /*
@@ -219,7 +220,7 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
             this.currentReceiveArchive.setName(archiveInfo.getArchiveName());
             this.connectionManager.setArchiveInfo(archiveInfo);
             this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_FILE);
-            this.mainActivity.onSending();
+            this.mainActivity.onSending((int)archiveInfo.getArchiveLength());
             if (archiveInfo.getFragmentsAmount() > 1) {
                 currentReceiveArchiveInFragments = new ArrayList<>();
             }
@@ -248,4 +249,5 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
             this.writeListener.write(getBytesFromObject("cango"));
         }
     }
+
 }
