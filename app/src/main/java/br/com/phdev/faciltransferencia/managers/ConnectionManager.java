@@ -1,5 +1,6 @@
 package br.com.phdev.faciltransferencia.managers;
 
+import android.transition.TransitionManager;
 import android.util.Log;
 
 import java.io.ByteArrayInputStream;
@@ -39,7 +40,7 @@ public class ConnectionManager implements OnReadListener{
     private TCPServer TCPServer;
     private OnObjectReceivedListener onObjectReceivedListener;
 
-    ConnectionManager(MainActivity context, OnObjectReceivedListener onObjectReceivedListener) {
+    ConnectionManager(TransferManager context, OnObjectReceivedListener onObjectReceivedListener) {
         this.onObjectReceivedListener = onObjectReceivedListener;
         this.broadcastSender = new BroadcastSender();
         this.TCPServer = new TCPServer(context, this.broadcastSender, this);
@@ -61,7 +62,7 @@ public class ConnectionManager implements OnReadListener{
     }
 
     public WriteListener getWriteListener() {
-        return TCPServer;
+        return TCPServer.getWriteListener();
     }
 
     public void setArchiveInfo(ArchiveInfo archiveInfo) {

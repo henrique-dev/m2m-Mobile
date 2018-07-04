@@ -1,6 +1,5 @@
 package br.com.phdev.faciltransferencia.connection;
 
-import android.os.Build;
 import android.util.Log;
 
 import java.io.IOException;
@@ -11,11 +10,14 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.ArrayList;
+import java.util.List;
 
 import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
 import br.com.phdev.faciltransferencia.connection.interfaces.OnReadListener;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.MainActivity;
+import br.com.phdev.faciltransferencia.managers.TransferManager;
 import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnProgressMadeListener;
 
@@ -35,16 +37,17 @@ import br.com.phdev.faciltransferencia.transfer.interfaces.OnProgressMadeListene
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public class TCPServer extends Thread implements WriteListener {
+public class TCPServer extends Thread {
 
     public static final int TRANSFER_PORT = 10011;
     private final int BUFFER_MSG_SIZE = 512;
+    private final int MAX_SOCKETS = 1;
+
+    public static int totalSocketConnected = 0;
 
     private ServerSocket serverSocket;
-    private Socket socket;
 
-    private InputStream in;
-    private OutputStream out;
+    private List<TcpConnection> connections;
 
     private ArchiveInfo archiveInfo;
 
@@ -64,12 +67,13 @@ public class TCPServer extends Thread implements WriteListener {
 
     private boolean connected = false;
 
-    public TCPServer(MainActivity mainActivity,
+    public TCPServer(TransferManager context,
                      Connection.OnClientConnectionTCPStatusListener broadcastConnectAlert, OnReadListener onReadListener) {
         this.onReadListener = onReadListener;
-        this.guiConnectAlert = mainActivity;
-        this.progressMadeListener = mainActivity;
+        this.guiConnectAlert = context;
+        this.progressMadeListener = context;
         this.broadcastConnectAlert = broadcastConnectAlert;
+        this.connections = new ArrayList<>();
     }
 
     public void setArchiveInfo(ArchiveInfo archiveInfo) {
@@ -87,9 +91,9 @@ public class TCPServer extends Thread implements WriteListener {
     public void close() {
         try {
             if (this.serverSocket!= null && !this.serverSocket.isClosed())this.serverSocket.close();
-            if (this.socket != null && !this.socket.isClosed()) this.socket.close();
-            if (this.out != null) this.out.close();
-            if (this.in != null) this.in.close();
+            for (TcpConnection c : this.connections) {
+                c.close();
+            }
         } catch (Exception e) {
             Log.d(MainActivity.TAG, e.getMessage());
         }
@@ -98,6 +102,10 @@ public class TCPServer extends Thread implements WriteListener {
             this.guiConnectAlert = null;
             this.broadcastConnectAlert = null;
         }
+    }
+
+    public WriteListener getWriteListener() {
+        return this.connections.get(0);
     }
 
     @Override
@@ -109,77 +117,22 @@ public class TCPServer extends Thread implements WriteListener {
                 serverSocket.setReuseAddress(true);
                 serverSocket.setSoTimeout(10000);
                 serverSocket.bind(new InetSocketAddress(TRANSFER_PORT));
-                this.socket = serverSocket.accept();
-                this.serverSocket.close();
-            }
-            Log.d(MainActivity.TAG, "Conectado ao servidor");
-            this.guiConnectAlert.onConnect();
-            this.broadcastConnectAlert.onConnect();
-            this.connected = true;
-            this.out = this.socket.getOutputStream();
-            this.in = this.socket.getInputStream();
 
-            while (true) {
-                int currentProgress = 0;
-                int totalDataReaded = 0;
-                int dataRead = 0;
-                byte[] finalBuffer;
-
-                if (receivingType == RECEIVING_TYPE_MSG) {
-                    Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + 512);
-                    finalBuffer = new byte[512];
-                    totalDataReaded += in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
-                    TCPServer.this.onReadListener.onRead(finalBuffer, totalDataReaded, false);
-                } else {
-                    Log.d(MainActivity.TAG, "Recebendo arquivo: " + archiveInfo.getArchiveName());
-                    long startTime = System.nanoTime();
-                    if (archiveInfo.getFragmentsAmount() > 1) {
-                        Log.d(MainActivity.TAG, "Recebendo arquivo fragmentado");
-
-                        for (int i=0; i<archiveInfo.getFragmentsAmount(); i++) {
-                            if (i == archiveInfo.getFragmentsAmount()-1 && archiveInfo.getLastFragmentLength() != 0) {
-                                finalBuffer = new byte[archiveInfo.getLastFragmentLength()];
-                            } else {
-                                finalBuffer = new byte[archiveInfo.getFragmentLength()];
-                            }
-                            Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + finalBuffer.length);
-                            while (totalDataReaded < finalBuffer.length) {
-                                dataRead = in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
-                                currentProgress += dataRead;
-                                totalDataReaded += dataRead;
-                                progressMadeListener.updateProgressBar(currentProgress);
-                                this.socket.setSoTimeout(20000);
-                            }
-                            Log.d(MainActivity.TAG, "Fragmento " + (i+1) + " recebido. Tamanho: " + totalDataReaded);
-                            this.onReadListener.onRead(finalBuffer, 0, true);
-                            totalDataReaded = 0;
-                        }
-                        long finalTime = (System.nanoTime() - startTime) / 1000000;
-                        Log.d(MainActivity.TAG, "Tempo total de transferência: " + finalTime + " milisegundos");
-                        Log.d(MainActivity.TAG, "Taxa de transferencia média final: " +
-                                (((double)archiveInfo.getArchiveLength() / (1024))/(((double)finalTime)/1000)) + " KB/s");
-
-                        this.onReadListener.onRead(null, 0, true);
-                    } else {
-                        Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + archiveInfo.getArchiveLength());
-                        finalBuffer = new byte[(int)archiveInfo.getArchiveLength()];
-                        while (totalDataReaded < finalBuffer.length) {
-                            dataRead = in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
-                            currentProgress += dataRead;
-                            totalDataReaded += dataRead;
-                            progressMadeListener.updateProgressBar(currentProgress);
-                            this.socket.setSoTimeout(20000);
-                        }
-                        long finalTime = (System.nanoTime() - startTime) / 1000000;
-                        Log.d(MainActivity.TAG, "Tempo total de transferência: " + finalTime + " milisegundos");
-                        Log.d(MainActivity.TAG, "Taxa de transferencia média final: " +
-                                (((double)archiveInfo.getArchiveLength() / (1024))/(((double)finalTime)/1000)) + " KB/s");
-
-                        this.onReadListener.onRead(finalBuffer, 0, false);
-                    }
+                for (int i=0; i<MAX_SOCKETS; i++) {
+                    TcpConnection con = new TcpConnection(this.serverSocket.accept(), onReadListener, progressMadeListener);
+                    con.start();
+                    this.connections.add(con);
                 }
-                this.socket.setSoTimeout(0);
+
+                if (!this.connected) {
+                    Log.d(MainActivity.TAG, "Conectado ao servidor");
+                    this.guiConnectAlert.onConnect();
+                    this.broadcastConnectAlert.onConnect();
+                }
+                this.connected = true;
             }
+            this.serverSocket.close();
+
         } catch (InterruptedIOException e) {
             if (this.guiConnectAlert != null)
                 this.guiConnectAlert.onDisconnect("Falha ao conectar. Por favor tente novamente.");
@@ -194,27 +147,144 @@ public class TCPServer extends Thread implements WriteListener {
             Log.d(MainActivity.TAG, e.getMessage());
         } finally {
             try {
-                if (this.socket != null) {
-                    this.socket.close();
-                }
                 if (this.serverSocket != null && !this.serverSocket.isClosed())
                     this.serverSocket.close();
             } catch (IOException e) {
                 Log.e(MainActivity.TAG, e.getMessage());
             } finally {
-                this.socket = null;
                 this.connected = false;
             }
         }
     }
 
-    @Override
-    public void write(byte[] bytes) {
-        try {
-            this.out.write(bytes);
-            this.out.flush();
-        } catch (IOException e) {
-            Log.e(MainActivity.TAG, "Falha ao enviar dados. " + e.getMessage());
+    public class TcpConnection extends Thread implements WriteListener {
+
+
+        private final int idSocket;
+
+        private Socket socket;
+
+        private InputStream in;
+        private OutputStream out;
+
+        private OnReadListener readListener;
+        private OnProgressMadeListener progressMadeListener;
+
+        public TcpConnection(Socket socket, OnReadListener readListener, OnProgressMadeListener progressMadeListener) {
+            this.socket = socket;
+            this.idSocket = totalSocketConnected++;
+            this.readListener = readListener;
+            this.progressMadeListener = progressMadeListener;
+        }
+
+        public void close() {
+            try {
+                if (this.socket != null && !this.socket.isClosed()) this.socket.close();
+                if (this.out != null) this.out.close();
+                if (this.in != null) this.in.close();
+            } catch (Exception e) {
+                Log.d(MainActivity.TAG, e.getMessage());
+            }
+            finally {
+                this.readListener = null;
+            }
+        }
+
+        @Override
+        public void run() {
+            try {
+                Log.d(MainActivity.TAG, "Conectado ao servidor");
+                this.out = this.socket.getOutputStream();
+                this.in = this.socket.getInputStream();
+
+                while (true) {
+                    int currentProgress = 0;
+                    int totalDataReaded = 0;
+                    int dataRead = 0;
+                    byte[] finalBuffer;
+
+                    if (receivingType == RECEIVING_TYPE_MSG) {
+                        Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + 512);
+                        finalBuffer = new byte[512];
+                        totalDataReaded += in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                        TCPServer.this.onReadListener.onRead(finalBuffer, totalDataReaded, false);
+                    } else {
+                        Log.d(MainActivity.TAG, "Recebendo arquivo: " + archiveInfo.getArchiveName());
+                        long startTime = System.nanoTime();
+                        if (archiveInfo.getFragmentsAmount() > 1) {
+                            Log.d(MainActivity.TAG, "Recebendo arquivo fragmentado");
+
+                            for (int i=0; i<archiveInfo.getFragmentsAmount(); i++) {
+                                if (i == archiveInfo.getFragmentsAmount()-1 && archiveInfo.getLastFragmentLength() != 0) {
+                                    finalBuffer = new byte[archiveInfo.getLastFragmentLength()];
+                                } else {
+                                    finalBuffer = new byte[archiveInfo.getFragmentLength()];
+                                }
+                                Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + finalBuffer.length);
+                                while (totalDataReaded < finalBuffer.length) {
+                                    dataRead = in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                                    currentProgress += dataRead;
+                                    totalDataReaded += dataRead;
+                                    progressMadeListener.updateProgressBar(currentProgress);
+                                    this.socket.setSoTimeout(20000);
+                                }
+                                Log.d(MainActivity.TAG, "Fragmento " + (i+1) + " recebido. Tamanho: " + totalDataReaded);
+                                this.readListener.onRead(finalBuffer, 0, true);
+                                totalDataReaded = 0;
+                            }
+                            long finalTime = (System.nanoTime() - startTime) / 1000000;
+                            Log.d(MainActivity.TAG, "Tempo total de transferência: " + finalTime + " milisegundos");
+                            Log.d(MainActivity.TAG, "Taxa de transferencia média final: " +
+                                    (((double)archiveInfo.getArchiveLength() / (1024))/(((double)finalTime)/1000)) + " KB/s");
+
+                            this.readListener.onRead(null, 0, true);
+                        } else {
+                            Log.d(MainActivity.TAG, "Novo tamanho para o buffer: " + archiveInfo.getArchiveLength());
+                            finalBuffer = new byte[(int)archiveInfo.getArchiveLength()];
+                            while (totalDataReaded < finalBuffer.length) {
+                                dataRead = in.read(finalBuffer, totalDataReaded, finalBuffer.length - totalDataReaded);
+                                currentProgress += dataRead;
+                                totalDataReaded += dataRead;
+                                progressMadeListener.updateProgressBar(currentProgress);
+                                this.socket.setSoTimeout(20000);
+                            }
+                            long finalTime = (System.nanoTime() - startTime) / 1000000;
+                            Log.d(MainActivity.TAG, "Tempo total de transferência: " + finalTime + " milisegundos");
+                            Log.d(MainActivity.TAG, "Taxa de transferencia média final: " +
+                                    (((double)archiveInfo.getArchiveLength() / (1024))/(((double)finalTime)/1000)) + " KB/s");
+
+                            this.readListener.onRead(finalBuffer, 0, false);
+                        }
+                    }
+                    this.socket.setSoTimeout(0);
+                }
+            } catch (InterruptedIOException e) {
+                Log.d(MainActivity.TAG, e.getMessage() != null ? e.getMessage() : "");
+            } catch (SocketException e) {
+                Log.d(MainActivity.TAG, e.getMessage());
+            } catch (IOException e) {
+                Log.d(MainActivity.TAG, e.getMessage());
+            } finally {
+                try {
+                    if (this.socket != null) {
+                        this.socket.close();
+                    }
+                } catch (IOException e) {
+                    Log.e(MainActivity.TAG, e.getMessage());
+                } finally {
+                    this.socket = null;
+                }
+            }
+        }
+
+        @Override
+        public void write(byte[] bytes) {
+            try {
+                this.out.write(bytes);
+                this.out.flush();
+            } catch (IOException e) {
+                Log.e(MainActivity.TAG, "Falha ao enviar dados. " + e.getMessage());
+            }
         }
     }
 }

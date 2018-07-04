@@ -23,6 +23,7 @@ import java.util.List;
 
 import br.com.phdev.faciltransferencia.MainActivity;
 import br.com.phdev.faciltransferencia.connection.TCPServer;
+import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.transfer.Archive;
 import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
@@ -47,7 +48,8 @@ import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListene
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public class TransferManager implements OnObjectReceivedListener, Serializable {
+public class TransferManager implements OnObjectReceivedListener, Serializable,
+        Connection.OnClientConnectionTCPStatusListener, TransferStatusListener, OnProgressMadeListener{
 
     private final String TAG = "myApp.TransferManager";
     private final long PERCENT_SPACE_ONDISK_UNAVAILABLE = 5;
@@ -62,17 +64,12 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
     private List<File> currentReceiveArchiveInFragments;
 
     public TransferManager(MainActivity mainActivity, String userName) {
-        this.connectionManager = new ConnectionManager(mainActivity,this);
+        this.connectionManager = new ConnectionManager(this,this);
         this.connectionManager.startBroadcastSender(userName);
         this.connectionManager.startTCPServer();
-        this.writeListener = this.connectionManager.getWriteListener();
+        //this.writeListener = this.connectionManager.getWriteListener();
         this.mainActivity = mainActivity;
-        //this.archives = new ArrayList<>();
     }
-
-    //public List<Archive> getArchivesList() {
-      //  return this.archives;
-    //}
 
     public void close() {
         this.connectionManager.close();
@@ -250,4 +247,34 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
         }
     }
 
+    @Override
+    public void onDisconnect(String msg) {
+        this.mainActivity.onDisconnect(msg);
+    }
+
+    @Override
+    public void onConnect() {
+        mainActivity.onConnect();
+        this.writeListener = this.connectionManager.getWriteListener();
+    }
+
+    @Override
+    public void updateProgressBar(int amount) {
+        this.mainActivity.updateProgressBar(amount);
+    }
+
+    @Override
+    public void onSending(int fileSize) {
+        this.mainActivity.onSending(fileSize);
+    }
+
+    @Override
+    public void onSendComplete(Archive archive) {
+        this.mainActivity.onSendComplete(archive);
+    }
+
+    @Override
+    public void noSpace() {
+        this.mainActivity.noSpace();
+    }
 }
