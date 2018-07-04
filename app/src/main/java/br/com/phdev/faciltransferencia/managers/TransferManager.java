@@ -98,7 +98,8 @@ public class TransferManager implements OnObjectReceivedListener, Connection.OnC
     private void writeFile(Archive archive) {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
-            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), archive.getLocalPath());
+            String pathToWrite = archive.getLocalPath();
+            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), pathToWrite != null ? pathToWrite : "");
             if (!absolutePath.mkdirs())
                 Log.d(TAG, "Direotrio não criado!");
             else
@@ -116,8 +117,10 @@ public class TransferManager implements OnObjectReceivedListener, Connection.OnC
                     archive.setName(archive.getMasterPath());
                     archive.setPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + archive.getMasterPath());
                     archive.setLocalPath(null);
-                } else
+                } else {
                     archive.setPath(pathAndName);
+                    archive.setMasterPath(pathAndName);
+                }
                 new File(pathAndName).setLastModified(System.nanoTime());
                 this.mainActivity.onSendComplete(archive);
             } catch (FileNotFoundException e) {
@@ -156,7 +159,8 @@ public class TransferManager implements OnObjectReceivedListener, Connection.OnC
     private void mergeFragments() {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
-            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), currentReceiveArchive.getLocalPath());
+            String pathToWrite = this.currentReceiveArchive.getLocalPath();
+            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), pathToWrite != null ? pathToWrite : "");
             if (absolutePath.mkdir())
                 Log.d(TAG, "Diretorio criado");
 
@@ -180,8 +184,10 @@ public class TransferManager implements OnObjectReceivedListener, Connection.OnC
                     currentReceiveArchive.setName(currentReceiveArchive.getMasterPath());
                     currentReceiveArchive.setPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + currentReceiveArchive.getMasterPath());
                     currentReceiveArchive.setLocalPath(null);
-                } else
+                } else {
                     currentReceiveArchive.setPath(pathAndName);
+                    currentReceiveArchive.setMasterPath(pathAndName);
+                }
 
                 new File(pathAndName).setLastModified(System.nanoTime());
                 this.mainActivity.onSendComplete(currentReceiveArchive);

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/connectedFileBrowser"
+    android:layout_width="match_parent"
+    android:visibility="invisible"
+    android:layout_height="match_parent"
+    tools:showIn="@layout/connected">
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="Função ainda indisponível"
+        tools:layout_editor_absoluteX="173dp"
+        tools:layout_editor_absoluteY="147dp" />
+</LinearLayout>

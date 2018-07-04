@@ -3,19 +3,21 @@ package br.com.phdev.faciltransferencia;
 import android.Manifest;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.content.Context;
+import android.app.DialogFragment;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.design.widget.BottomNavigationView;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.MimeTypeFilter;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.MimeTypeMap;
@@ -30,7 +32,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
+import br.com.phdev.faciltransferencia.customviews.AboutDialogFragment;
 import br.com.phdev.faciltransferencia.customviews.ArchiveAdapter;
+import br.com.phdev.faciltransferencia.customviews.HelpDialogFragment;
 import br.com.phdev.faciltransferencia.managers.TransferManager;
 import br.com.phdev.faciltransferencia.transfer.Archive;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnProgressMadeListener;
@@ -51,6 +55,8 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     private Button button;
     private EditText editText;
 
+    private BottomNavigationView bottomNavigationView;
+
     private ProgressBar progressBar_receiving;
 
     private ListView listViewArchives;
@@ -58,6 +64,31 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
 
     private List<Archive> archivesList;
     private Archive lastArchive;
+
+    private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
+            = new BottomNavigationView.OnNavigationItemSelectedListener() {
+
+        @Override
+        public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+            switch (item.getItemId()) {
+                case R.id.navigation_receive_files: {
+                    ViewGroup nrf = (ViewGroup) findViewById(R.id.connectedReceivedFiles);
+                    ViewGroup nfb = (ViewGroup) findViewById(R.id.connectedFileBrowser);
+                    nrf.setVisibility(View.VISIBLE);
+                    nfb.setVisibility(View.INVISIBLE);
+                    return true;
+                }
+                case R.id.navigation_file_browser: {
+                    ViewGroup nrf = (ViewGroup) findViewById(R.id.connectedReceivedFiles);
+                    ViewGroup nfb = (ViewGroup) findViewById(R.id.connectedFileBrowser);
+                    nfb.setVisibility(View.VISIBLE);
+                    nrf.setVisibility(View.INVISIBLE);
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
 
 
     @Override
@@ -131,6 +162,9 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         this.progressBar_receiving = (ProgressBar) findViewById(R.id.progressBar_receiving);
         this.progressBar_receiving.setVisibility(View.INVISIBLE);
 
+        this.bottomNavigationView = (BottomNavigationView) findViewById(R.id.navigation);
+        this.bottomNavigationView.setOnNavigationItemSelectedListener(this.mOnNavigationItemSelectedListener);
+
         if (android.os.Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP_MR1) {
             int internetPermissions = ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET);
             int writePermissions = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -142,6 +176,33 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
             }
         }
 
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_connected, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        switch (id) {
+            case R.id.menu_connected_action_about:
+                new AboutDialogFragment().show(getFragmentManager(), TAG);
+                return true;
+            case R.id.menu_connected_action_help:
+                new HelpDialogFragment().show(getFragmentManager(), TAG);
+                return true;
+        }
+
+        return super.onOptionsItemSelected(item);
     }
 
     @Override

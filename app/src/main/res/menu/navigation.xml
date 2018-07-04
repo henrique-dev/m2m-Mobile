@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <item
+        android:id="@+id/navigation_receive_files"
+        android:icon="@drawable/baseline_get_app_black_48"
+        android:title="Arquivos recebidos" />
+    <item
+        android:id="@+id/navigation_file_browser"
+        android:icon="@drawable/baseline_toc_black_48"
+        android:title="Explorador de arquivos" />
+
+
 </menu>
