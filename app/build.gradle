@@ -6,8 +6,8 @@ android {
         applicationId "phdev.com.br.faciltransferencia"
         minSdkVersion 15
         targetSdkVersion 27
-        versionCode 5
-        versionName "1.212"
+        versionCode 6
+        versionName "1.213"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {

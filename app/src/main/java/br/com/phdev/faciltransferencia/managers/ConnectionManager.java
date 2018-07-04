@@ -39,8 +39,8 @@ public class ConnectionManager implements OnReadListener{
     private TCPServer TCPServer;
     private OnObjectReceivedListener onObjectReceivedListener;
 
-    ConnectionManager(MainActivity context, OnObjectReceivedListener onObjectReceivedListener) {
-        this.onObjectReceivedListener = onObjectReceivedListener;
+    ConnectionManager(TransferManager context) {
+        this.onObjectReceivedListener = context;
         this.broadcastSender = new BroadcastSender();
         this.TCPServer = new TCPServer(context, this.broadcastSender, this);
     }

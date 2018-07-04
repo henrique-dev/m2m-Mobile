@@ -1,7 +1,5 @@
 package br.com.phdev.faciltransferencia.managers;
 
-import android.content.Context;
-import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
 
@@ -13,16 +11,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
-import java.io.Serializable;
-import java.net.URI;
 import java.nio.channels.FileChannel;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
 import br.com.phdev.faciltransferencia.MainActivity;
 import br.com.phdev.faciltransferencia.connection.TCPServer;
+import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.transfer.Archive;
 import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
@@ -47,32 +42,26 @@ import br.com.phdev.faciltransferencia.transfer.interfaces.TransferStatusListene
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-public class TransferManager implements OnObjectReceivedListener, Serializable {
+public class TransferManager implements OnObjectReceivedListener, Connection.OnClientConnectionTCPStatusListener, TransferStatusListener, OnProgressMadeListener {
 
     private final String TAG = "myApp.TransferManager";
-    private final long PERCENT_SPACE_ONDISK_UNAVAILABLE = 5;
+    private final long PERCENT_SPACE_ON_DISK_UNAVAILABLE = 5;
+    public static final int CURRENT_ID_VERSION = 6;
 
     private MainActivity mainActivity;
     private ConnectionManager connectionManager;
     private WriteListener writeListener;
 
-    //private List<Archive> archives;
-
     private Archive currentReceiveArchive;
     private List<File> currentReceiveArchiveInFragments;
 
     public TransferManager(MainActivity mainActivity, String userName) {
-        this.connectionManager = new ConnectionManager(mainActivity,this);
+        this.connectionManager = new ConnectionManager(this);
         this.connectionManager.startBroadcastSender(userName);
         this.connectionManager.startTCPServer();
         this.writeListener = this.connectionManager.getWriteListener();
         this.mainActivity = mainActivity;
-        //this.archives = new ArrayList<>();
     }
-
-    //public List<Archive> getArchivesList() {
-      //  return this.archives;
-    //}
 
     public void close() {
         this.connectionManager.close();
@@ -109,8 +98,8 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
     private void writeFile(Archive archive) {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
-            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
-            if (!absolutePath.mkdir())
+            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), archive.getLocalPath());
+            if (!absolutePath.mkdirs())
                 Log.d(TAG, "Direotrio não criado!");
             else
                 Log.d(TAG, "Diretorio criado");
@@ -122,10 +111,14 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 fos.flush();
                 fos.close();
                 Log.d(TAG, "Arquivo criado com sucesso.");
-                new File(pathAndName).setLastModified(System.nanoTime());
                 archive.setBytes(null);
-                archive.setPath(pathAndName);
-                //this.archives.add(archive);
+                if (archive.getMasterPath() != null) {
+                    archive.setName(archive.getMasterPath());
+                    archive.setPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + archive.getMasterPath());
+                    archive.setLocalPath(null);
+                } else
+                    archive.setPath(pathAndName);
+                new File(pathAndName).setLastModified(System.nanoTime());
                 this.mainActivity.onSendComplete(archive);
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "Falha ao salvar o arquivo. " + e.getMessage());
@@ -163,7 +156,7 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
     private void mergeFragments() {
         String state = Environment.getExternalStorageState();
         if (Environment.MEDIA_MOUNTED.equals(state)) {
-            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
+            File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), currentReceiveArchive.getLocalPath());
             if (absolutePath.mkdir())
                 Log.d(TAG, "Diretorio criado");
 
@@ -182,10 +175,16 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
                 outFile.close();
                 fos.flush();
                 fos.close();
+
+                if (currentReceiveArchive.getMasterPath() != null) {
+                    currentReceiveArchive.setName(currentReceiveArchive.getMasterPath());
+                    currentReceiveArchive.setPath(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + currentReceiveArchive.getMasterPath());
+                    currentReceiveArchive.setLocalPath(null);
+                } else
+                    currentReceiveArchive.setPath(pathAndName);
+
                 new File(pathAndName).setLastModified(System.nanoTime());
-                currentReceiveArchive.setPath(pathAndName);
                 this.mainActivity.onSendComplete(currentReceiveArchive);
-                //this.archives.add(currentReceiveArchive);
                 Log.d(TAG, "Arquivo criado com sucesso.");
             } catch (FileNotFoundException e) {
                 Log.e(TAG, "Erro ao salvar arquivo!" + e.getMessage());
@@ -201,7 +200,7 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
         if (Environment.MEDIA_MOUNTED.equals(state)) {
             File absolutePath = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "");
             long freeSpaceAvailable = absolutePath.getFreeSpace();
-            long spaceAvailableForUs = freeSpaceAvailable - (long)(freeSpaceAvailable * (double)(PERCENT_SPACE_ONDISK_UNAVAILABLE / 100));
+            long spaceAvailableForUs = freeSpaceAvailable - (long)(freeSpaceAvailable * (double)(PERCENT_SPACE_ON_DISK_UNAVAILABLE / 100));
             return fileSize <= spaceAvailableForUs;
         }
         return false;
@@ -218,6 +217,8 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
             }
             this.currentReceiveArchive = new Archive();
             this.currentReceiveArchive.setName(archiveInfo.getArchiveName());
+            this.currentReceiveArchive.setLocalPath(archiveInfo.getLocalPath());
+            this.currentReceiveArchive.setMasterPath(archiveInfo.getMasterPath());
             this.connectionManager.setArchiveInfo(archiveInfo);
             this.connectionManager.setConnectionReceivingType(TCPServer.RECEIVING_TYPE_FILE);
             this.mainActivity.onSending((int)archiveInfo.getArchiveLength());
@@ -250,4 +251,33 @@ public class TransferManager implements OnObjectReceivedListener, Serializable {
         }
     }
 
+    @Override
+    public void onDisconnect(String msg) {
+        mainActivity.onDisconnect(msg);
+    }
+
+    @Override
+    public void onConnect() {
+        mainActivity.onConnect();
+    }
+
+    @Override
+    public void updateProgressBar(int amount) {
+        mainActivity.updateProgressBar(amount);
+    }
+
+    @Override
+    public void onSending(int fileSize) {
+        mainActivity.onSending(fileSize);
+    }
+
+    @Override
+    public void onSendComplete(Archive archive) {
+        mainActivity.onSendComplete(archive);
+    }
+
+    @Override
+    public void noSpace() {
+        mainActivity.noSpace();
+    }
 }

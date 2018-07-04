@@ -16,6 +16,7 @@ import br.com.phdev.faciltransferencia.connection.interfaces.Connection;
 import br.com.phdev.faciltransferencia.connection.interfaces.OnReadListener;
 import br.com.phdev.faciltransferencia.connection.interfaces.WriteListener;
 import br.com.phdev.faciltransferencia.MainActivity;
+import br.com.phdev.faciltransferencia.managers.TransferManager;
 import br.com.phdev.faciltransferencia.transfer.ArchiveInfo;
 import br.com.phdev.faciltransferencia.transfer.interfaces.OnProgressMadeListener;
 
@@ -64,11 +65,11 @@ public class TCPServer extends Thread implements WriteListener {
 
     private boolean connected = false;
 
-    public TCPServer(MainActivity mainActivity,
+    public TCPServer(TransferManager context,
                      Connection.OnClientConnectionTCPStatusListener broadcastConnectAlert, OnReadListener onReadListener) {
         this.onReadListener = onReadListener;
-        this.guiConnectAlert = mainActivity;
-        this.progressMadeListener = mainActivity;
+        this.guiConnectAlert = context;
+        this.progressMadeListener = context;
         this.broadcastConnectAlert = broadcastConnectAlert;
     }
 

@@ -57,6 +57,8 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     private ArchiveAdapter archiveAdapter;
 
     private List<Archive> archivesList;
+    private Archive lastArchive;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -195,13 +197,13 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
     }
 
     @Override
-    public void onDisconnect(final String msg) {
+    public synchronized void onDisconnect(final String msg) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 MainActivity.this.fadeToMain();
                 MainActivity.this.button.setEnabled(true);
-                Snackbar.make(MainActivity.this.mainView, msg, Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                Snackbar.make(MainActivity.this.mainView, msg, Snackbar.LENGTH_LONG).setAction("", null).show();
             }
         });
     }
@@ -213,6 +215,7 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
             public void run() {
                 MainActivity.this.fadeToConnected();
                 MainActivity.this.archivesList = new ArrayList<>();
+                MainActivity.this.lastArchive = new Archive();
                 MainActivity.this.archiveAdapter = new ArchiveAdapter(MainActivity.this, MainActivity.this.archivesList);
                 MainActivity.this.listViewArchives.setAdapter(MainActivity.this.archiveAdapter);
             }
@@ -246,13 +249,18 @@ public class MainActivity extends AppCompatActivity implements Connection.OnClie
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    archiveAdapter.add(archive);
-                    String ext = MimeTypeMap.getFileExtensionFromUrl(archive.getPath());
-                    MediaScannerConnection.scanFile(MainActivity.this, new String[]{archive.getPath()},
-                            new String[]{ext}, null);
-                    archiveAdapter.notifyDataSetChanged();
-                } catch (Exception e) {}
+                if (!lastArchive.getMasterPath().equals(archive.getMasterPath())) {
+                    try {
+                        archiveAdapter.add(archive);
+                        String ext = MimeTypeMap.getFileExtensionFromUrl(archive.getPath());
+                        MediaScannerConnection.scanFile(MainActivity.this, new String[]{archive.getPath()},
+                                new String[]{ext}, null);
+                        archiveAdapter.notifyDataSetChanged();
+                        lastArchive = archive;
+                    } catch (Exception e) {
+                    }
+                }
+
                 MainActivity.this.progressBar_receiving.setVisibility(View.INVISIBLE);
             }
         });
